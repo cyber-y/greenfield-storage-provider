@@ -4,19 +4,18 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
-	"io"
-	"net/http"
-
-	"github.com/bnb-chain/greenfield/types/s3util"
-	storagetypes "github.com/bnb-chain/greenfield/x/storage/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/bnb-chain/greenfield-storage-provider/model"
 	merrors "github.com/bnb-chain/greenfield-storage-provider/model/errors"
 	"github.com/bnb-chain/greenfield-storage-provider/pkg/log"
 	"github.com/bnb-chain/greenfield-storage-provider/service/downloader/types"
 	metatypes "github.com/bnb-chain/greenfield-storage-provider/service/metadata/types"
 	uploadertypes "github.com/bnb-chain/greenfield-storage-provider/service/uploader/types"
+	"github.com/bnb-chain/greenfield/types/s3util"
+	storagetypes "github.com/bnb-chain/greenfield/x/storage/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"io"
+	"net/http"
+	"net/url"
 )
 
 // getObjectHandler handles the get object request
@@ -278,13 +277,20 @@ func (gateway *Gateway) getObjectByUniversalEndpointHandler(w http.ResponseWrite
 		return
 	}
 
+	escapedObjectName, err := url.QueryUnescape(reqContext.objectName)
+	if err != nil {
+		log.Errorw("failed to unescape object name ", "object_name", reqContext.objectName, "error", err)
+		errDescription = InvalidKey
+		return
+	}
+
 	if err = s3util.CheckValidBucketName(reqContext.bucketName); err != nil {
 		log.Errorw("failed to check bucket name", "bucket_name", reqContext.bucketName, "error", err)
 		errDescription = InvalidBucketName
 		return
 	}
-	if err = s3util.CheckValidObjectName(reqContext.objectName); err != nil {
-		log.Errorw("failed to check object name", "object_name", reqContext.objectName, "error", err)
+	if err = s3util.CheckValidObjectName(escapedObjectName); err != nil {
+		log.Errorw("failed to check object name", "object_name", escapedObjectName, "error", err)
 		errDescription = InvalidKey
 		return
 	}
@@ -326,14 +332,14 @@ func (gateway *Gateway) getObjectByUniversalEndpointHandler(w http.ResponseWrite
 
 	// In first phase, do not provide universal endpoint for private object
 	getObjectInfoReq := &metatypes.GetObjectByObjectNameAndBucketNameRequest{
-		ObjectName: reqContext.objectName,
+		ObjectName: escapedObjectName,
 		BucketName: reqContext.bucketName,
 		IsFullList: false,
 	}
 
 	getObjectInfoRes, err := gateway.metadata.GetObjectByObjectNameAndBucketName(ctx, getObjectInfoReq)
 	if err != nil || getObjectInfoRes == nil || getObjectInfoRes.GetObject() == nil || getObjectInfoRes.GetObject().GetObjectInfo() == nil {
-		log.Errorw("failed to check object info", "object_name", reqContext.objectName, "error", err)
+		log.Errorw("failed to check object info", "object_name", escapedObjectName, "error", err)
 		errDescription = InvalidKey
 		return
 	}
