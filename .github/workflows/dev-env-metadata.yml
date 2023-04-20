@@ -2,7 +2,7 @@ name: Metadata Dev Env Docker
 
 on:
   push:
-    branches: [ fix-universalendpoint]
+    branches: [ fix-uewithdocker ]
 
 
 env:
