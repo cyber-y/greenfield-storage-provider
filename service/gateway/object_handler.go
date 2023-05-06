@@ -372,8 +372,12 @@ func (gateway *Gateway) getObjectByUniversalEndpointHandler(w http.ResponseWrite
 		}
 
 		//check if addr is same as bucket owner address, currently bucket owner and object owner has to be the same
-		if strings.ToLower(addr.String()) == strings.ToLower(getBucketInfoRes.GetBucket().GetBucketInfo().GetOwner()) {
+		if strings.EqualFold(addr.String(), getBucketInfoRes.GetBucket().GetBucketInfo().GetOwner()) {
 			isFullList = true
+		} else {
+			log.Errorw("failed to verify signature")
+			errDescription = SignatureNotMatch
+			return
 		}
 	}
 
