@@ -2,7 +2,7 @@ name: Metadata Dev Env Docker
 
 on:
   push:
-    branches: [ feat-pagination-** ]
+    branches: [ feat-privateobjecton0.1.1 ]
 
 
 env:
