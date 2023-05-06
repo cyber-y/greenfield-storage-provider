@@ -360,7 +360,7 @@ func (gateway *Gateway) getObjectByUniversalEndpointHandler(w http.ResponseWrite
 		if expires.Before(time.Now()) {
 			log.Warnw("private object universal endpoint signature expired", "bucket_name", reqContext.bucketName,
 				"object_name", reqContext.objectName, "expire_time", reqContext.expireTime)
-			errDescription = AccessDenied
+			errDescription = SignatureExpired
 			return
 		}
 
