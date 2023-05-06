@@ -21,7 +21,15 @@ import (
 	"github.com/bnb-chain/greenfield-storage-provider/pkg/log"
 	p2ptypes "github.com/bnb-chain/greenfield-storage-provider/pkg/p2p/types"
 	"github.com/bnb-chain/greenfield-storage-provider/util"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/evmos/ethermint/crypto/ethsecp256k1"
 )
+
+const signatureMessage = "Click \"Sign\" to generate a universal share link for the file %s in the bucket %s, expires at %s\n" +
+	"\n This signature will not cost you any fees."
 
 // requestContext is a request context.
 type requestContext struct {
@@ -37,11 +45,41 @@ type requestContext struct {
 	isAnonymous bool // It is anonymous when there is no GnfdAuthorizationHeader
 	bucketInfo  *storagetypes.BucketInfo
 	objectInfo  *storagetypes.ObjectInfo
+	expireTime  string
+	signature   string
+}
+
+// RecoverAddr recovers the sender address from msg and signature
+// TODO: move it to greenfield-common
+func RecoverAddr(msg []byte, sig []byte) (sdk.AccAddress, ethsecp256k1.PubKey, error) {
+	pubKeyByte, err := secp256k1.RecoverPubkey(msg, sig)
+	if err != nil {
+		return nil, ethsecp256k1.PubKey{}, err
+	}
+	pubKey, _ := ethcrypto.UnmarshalPubkey(pubKeyByte)
+	pk := ethsecp256k1.PubKey{
+		Key: ethcrypto.CompressPubkey(pubKey),
+	}
+	recoverAcc := sdk.AccAddress(pk.Address().Bytes())
+	return recoverAcc, pk, nil
 }
 
 // newRequestContext return a request context.
 func newRequestContext(r *http.Request) *requestContext {
+	var (
+		expires   string
+		signature string
+	)
+
 	vars := mux.Vars(r)
+
+	queryParams := r.URL.Query()
+	if queryParams["expires"] != nil {
+		expires = queryParams["expires"][0]
+	}
+	if queryParams["signature"] != nil {
+		signature = queryParams["signature"][0]
+	}
 	return &requestContext{
 		request:    r,
 		routerName: mux.CurrentRoute(r).GetName(),
@@ -51,6 +89,8 @@ func newRequestContext(r *http.Request) *requestContext {
 		accountID:  vars["account_id"],
 		vars:       vars,
 		startTime:  time.Now(),
+		expireTime: expires,
+		signature:  signature,
 	}
 }
 
@@ -103,6 +143,9 @@ func (reqContext *requestContext) verifySignature() (sdk.AccAddress, error) {
 	v2SignaturePrefix := signaturePrefix(model.SignTypeV2, model.SignAlgorithm)
 	if strings.HasPrefix(requestSignature, v2SignaturePrefix) {
 		return reqContext.verifySignatureV2(requestSignature[len(v2SignaturePrefix):])
+	}
+	if reqContext.expireTime != "" && reqContext.signature != "" {
+		return reqContext.verifyUniversalEndpointSignature()
 	}
 	// Anonymous users can get public object.
 	if requestSignature == "" && reqContext.routerName == getObjectRouterName {
@@ -190,6 +233,45 @@ func (reqContext *requestContext) verifySignatureV2(requestSignature string) (sd
 	// TODO: parse metamask signature and check timeout
 	reqContext.skipAuth = true
 	return sdk.AccAddress{}, nil
+}
+
+// verifyUniversalEndpointSignature used to verify request type universal endpoint signature, return (address, nil) if check succeed
+func (reqContext *requestContext) verifyUniversalEndpointSignature() (sdk.AccAddress, error) {
+	var (
+		signedMsg string
+		signature []byte
+		err       error
+	)
+
+	// check request integrity
+	signedMsg = fmt.Sprintf(signatureMessage, reqContext.objectName, reqContext.bucketName, reqContext.expireTime)
+
+	signature, err = hexutil.Decode(reqContext.signature)
+	if err != nil {
+		return nil, err
+	}
+
+	realMsgToSign := accounts.TextHash([]byte(signedMsg))
+
+	if len(signature) != crypto.SignatureLength {
+		log.Errorw("signature length (actual: %d) doesn't match typical [R||S||V] signature 65 bytes")
+		return nil, errors.ErrSignatureConsistent
+	}
+	if signature[crypto.RecoveryIDOffset] == 27 || signature[crypto.RecoveryIDOffset] == 28 {
+		signature[crypto.RecoveryIDOffset] -= 27
+	}
+
+	// check signature consistent
+	addr, pk, err := RecoverAddr(realMsgToSign, signature)
+	if err != nil {
+		log.Errorw("failed to recover address")
+		return nil, errors.ErrSignatureConsistent
+	}
+	if !secp256k1.VerifySignature(pk.Bytes(), realMsgToSign, signature[:len(signature)-1]) {
+		log.Errorw("failed to verify signature")
+		return nil, errors.ErrSignatureConsistent
+	}
+	return addr, nil
 }
 
 func parseRange(rangeStr string) (bool, int64, int64) {
