@@ -3,6 +3,7 @@ package blocksyncer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync/atomic"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -18,17 +19,17 @@ import (
 	coretypes "github.com/tendermint/tendermint/rpc/core/types"
 	tmtypes "github.com/tendermint/tendermint/types"
 
-	"github.com/bnb-chain/greenfield-storage-provider/model/errors"
 	"github.com/bnb-chain/greenfield-storage-provider/pkg/log"
 	"github.com/bnb-chain/greenfield-storage-provider/pkg/metrics"
 )
 
-func NewIndexer(codec codec.Codec, proxy node.Node, db database.Database, modules []modules.Module) parser.Indexer {
+func NewIndexer(codec codec.Codec, proxy node.Node, db database.Database, modules []modules.Module, serviceName string) parser.Indexer {
 	return &Impl{
-		codec:   codec,
-		Node:    proxy,
-		DB:      db,
-		Modules: modules,
+		codec:       codec,
+		Node:        proxy,
+		DB:          db,
+		Modules:     modules,
+		ServiceName: serviceName,
 	}
 }
 
@@ -40,6 +41,8 @@ type Impl struct {
 
 	LatestBlockHeight atomic.Value
 	CatchUpFlag       atomic.Value
+
+	ServiceName string
 }
 
 // ExportBlock accepts a finalized block and persists then inside the database.
@@ -72,16 +75,16 @@ func (i *Impl) Process(height uint64) error {
 	var err error
 	flagAny := i.GetCatchUpFlag().Load()
 	flag := flagAny.(int64)
+	heightKey := fmt.Sprintf("%s-%d", i.GetServiceName(), height)
 	if flag == -1 || flag >= int64(height) {
-		blockAny, okb := blockMap.Load(height)
-		eventsAny, oke := eventMap.Load(height)
-		txsAny, okt := txMap.Load(height)
+		blockAny, okb := blockMap.Load(heightKey)
+		eventsAny, oke := eventMap.Load(heightKey)
+		txsAny, okt := txMap.Load(heightKey)
 		block, _ = blockAny.(*coretypes.ResultBlock)
 		events, _ = eventsAny.(*coretypes.ResultBlockResults)
 		txs, _ = txsAny.([]*types.Tx)
 		if !okb || !oke || !okt {
 			log.Warnf("failed to get map data height: %d", height)
-			return errors.ErrBlockNotFound
 		}
 	} else {
 		// get block info
@@ -141,9 +144,9 @@ func (i *Impl) Process(height uint64) error {
 		return err
 	}
 
-	blockMap.Delete(height)
-	eventMap.Delete(height)
-	txMap.Delete(height)
+	blockMap.Delete(heightKey)
+	eventMap.Delete(heightKey)
+	txMap.Delete(heightKey)
 
 	return nil
 }
@@ -267,9 +270,10 @@ func (i *Impl) Processed(ctx context.Context, height uint64) (bool, error) {
 	}
 	log.Infof("epoch height:%d, cur height: %d", ep.BlockHeight, height)
 	if ep.BlockHeight > int64(height) {
-		blockMap.Delete(height)
-		eventMap.Delete(height)
-		txMap.Delete(height)
+		heightKey := fmt.Sprintf("%s-%d", i.GetServiceName(), height)
+		blockMap.Delete(heightKey)
+		eventMap.Delete(heightKey)
+		txMap.Delete(heightKey)
 	}
 	return ep.BlockHeight > int64(height), nil
 }
@@ -303,4 +307,8 @@ func (i *Impl) GetCatchUpFlag() *atomic.Value {
 func (i *Impl) CreateMasterTable() error {
 
 	return nil
+}
+
+func (i *Impl) GetServiceName() string {
+	return i.ServiceName
 }
