@@ -84,6 +84,7 @@ func (i *Impl) Process(height uint64) error {
 		events, _ = eventsAny.(*coretypes.ResultBlockResults)
 		txs, _ = txsAny.([]*types.Tx)
 		if !okb || !oke || !okt {
+			log.Infow("arguments", "okb", okb, "oke", oke, "okt", okt, "flag", flag)
 			log.Warnf("failed to get map data height: %d", height)
 		}
 	} else {
