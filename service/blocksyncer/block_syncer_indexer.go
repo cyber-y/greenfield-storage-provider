@@ -19,6 +19,7 @@ import (
 	coretypes "github.com/tendermint/tendermint/rpc/core/types"
 	tmtypes "github.com/tendermint/tendermint/types"
 
+	"github.com/bnb-chain/greenfield-storage-provider/model/errors"
 	"github.com/bnb-chain/greenfield-storage-provider/pkg/log"
 	"github.com/bnb-chain/greenfield-storage-provider/pkg/metrics"
 )
@@ -84,8 +85,8 @@ func (i *Impl) Process(height uint64) error {
 		events, _ = eventsAny.(*coretypes.ResultBlockResults)
 		txs, _ = txsAny.([]*types.Tx)
 		if !okb || !oke || !okt {
-			log.Infow("arguments", "okb", okb, "oke", oke, "okt", okt, "flag", flag)
 			log.Warnf("failed to get map data height: %d", height)
+			return errors.ErrBlockNotFound
 		}
 	} else {
 		// get block info
