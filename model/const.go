@@ -140,8 +140,8 @@ const (
 	SpGcPrivKey = "SIGNER_GC_PRIV_KEY"
 	// DsnBlockSyncer defines env variable name for block syncer dsn
 	DsnBlockSyncer = "BLOCK_SYNCER_DSN"
-	// DsnBlockSyncerBackup defines env variable name for block syncer backup dsn
-	DsnBlockSyncerBackup = "BLOCK_SYNCER_BK_DSN"
+	// DsnBlockSyncerSwitched defines env variable name for block syncer backup dsn
+	DsnBlockSyncerSwitched = "BLOCK_SYNCER_DSN_SWITCHED"
 	// P2PPrivateKey defines env variable for p2p protocol private key
 	P2PPrivateKey = "P2P_PRIVATE_KEY"
 )
