@@ -104,6 +104,11 @@ func (g *Gateway) registerHandler(r *mux.Router) {
 		Methods(http.MethodGet).
 		HandlerFunc(g.getUserBucketsHandler)
 
+	r.Name("verifyPermission").
+		Methods(http.MethodGet).
+		Path("/verify/{operator:.+}/{bucket:.+}/{object.+}/{action:.+}").
+		HandlerFunc(g.verifyPermission)
+
 	// admin router, path style
 	r.Path(model.GetApprovalPath).
 		Name(approvalRouterName).

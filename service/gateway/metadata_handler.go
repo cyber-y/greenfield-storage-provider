@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"github.com/bnb-chain/greenfield/x/storage/types"
+	"github.com/gorilla/mux"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/bnb-chain/greenfield/types/s3util"
+	types2 "github.com/bnb-chain/greenfield/x/permission/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/jsonpb"
 
@@ -315,6 +319,58 @@ func (gateway *Gateway) getBucketMetaHandler(w http.ResponseWriter, r *http.Requ
 	if err = m.Marshal(&b, resp); err != nil {
 		log.Errorf("failed to get bucket metadata", "error", err)
 		errDescription = makeErrorDescription(err)
+		return
+	}
+
+	w.Header().Set(model.ContentTypeHeader, model.ContentTypeJSONHeaderValue)
+	w.Write(b.Bytes())
+}
+
+func (gateway *Gateway) verifyPermission(w http.ResponseWriter, r *http.Request) {
+	var (
+		err            error
+		b              bytes.Buffer
+		errDescription *errorDescription
+		reqContext     *requestContext
+		actionType     int64
+	)
+	vars := mux.Vars(r)
+	reqContext = newRequestContext(r)
+	defer func() {
+		if errDescription != nil {
+			_ = errDescription.errorJSONResponse(w, reqContext)
+		}
+		if errDescription != nil && errDescription.statusCode != http.StatusOK {
+			log.Errorf("action(%v) statusCode(%v) %v", getUserBucketsRouterName, errDescription.statusCode, reqContext.generateRequestDetail())
+		} else {
+			log.Infof("action(%v) statusCode(200) %v", getUserBucketsRouterName, reqContext.generateRequestDetail())
+		}
+	}()
+
+	if gateway.metadata == nil {
+		log.Error("failed to failed to verify permission due to not config metadata")
+		errDescription = NotExistComponentError
+		return
+	}
+
+	actionType, _ = strconv.ParseInt(vars["action"], 10, 64)
+
+	req := &types.QueryVerifyPermissionRequest{
+		Operator:   vars["operator"],
+		BucketName: vars["bucket"],
+		ObjectName: vars["object"],
+		ActionType: types2.ActionType(actionType),
+	}
+	ctx := log.Context(context.Background(), req)
+	resp, err := gateway.metadata.VerifyPermission(ctx, req)
+	if err != nil {
+		log.Errorf("failed to verify permission", "error", err)
+		return
+	}
+
+	m := jsonpb.Marshaler{EmitDefaults: true, OrigName: true}
+	if err = m.Marshal(&b, resp); err != nil {
+		log.Errorf("failed to verify permission", "error", err)
 		return
 	}
 
