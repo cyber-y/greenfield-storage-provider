@@ -69,6 +69,9 @@ func (i *Impl) HandleEvent(ctx context.Context, block *coretypes.ResultBlock, tx
 // Process fetches a block for a given height and associated metadata and export it to a database.
 // It returns an error if any export process fails.
 func (i *Impl) Process(height uint64) error {
+	if height == 1694 {
+		log.Errorf("in")
+	}
 	log.Debugw("processing block", "height", height)
 	var block *coretypes.ResultBlock
 	var events *coretypes.ResultBlockResults
