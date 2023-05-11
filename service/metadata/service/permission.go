@@ -20,8 +20,9 @@ import (
 	"github.com/bnb-chain/greenfield-storage-provider/store/bsdb"
 )
 
-// VerifyPermission Verify the input account’s permission to input items
+// VerifyPermission Verify the input items permission.
 func (metadata *Metadata) VerifyPermission(ctx context.Context, req *storagetypes.QueryVerifyPermissionRequest) (resp *storagetypes.QueryVerifyPermissionResponse, err error) {
+	log.Debugf("VerifyPermission request: operator:%s, bucket_name: %s, object_name: %s, action_type: %d", req.Operator, req.BucketName, req.ObjectName, req.ActionType)
 	var (
 		operator   sdk.AccAddress
 		bucketInfo *bsdb.Bucket
@@ -41,6 +42,7 @@ func (metadata *Metadata) VerifyPermission(ctx context.Context, req *storagetype
 		log.CtxErrorw(ctx, "failed to creates an AccAddress from a HEX-encoded string", "req.Operator", operator.String(), "error", err)
 		return nil, err
 	}
+	log.Debugf("AccAddressFromHexUnsafe result: operator: %s", operator.String())
 
 	if err = s3util.CheckValidBucketName(req.BucketName); err != nil {
 		log.Errorw("failed to check bucket name", "bucket_name", req.BucketName, "error", err)
@@ -52,10 +54,11 @@ func (metadata *Metadata) VerifyPermission(ctx context.Context, req *storagetype
 		log.CtxErrorw(ctx, "failed to get bucket info", "error", err)
 		return nil, err
 	}
-	if bucketInfo == nil {
+	if bucketInfo == nil || bucketInfo.Removed {
 		log.CtxError(ctx, "no such bucket")
 		return nil, errors.ErrNoSuchBucket
 	}
+	log.Debugf("GetBucketByName result: bucketInfo: %v", bucketInfo)
 
 	if req.ObjectName == "" {
 		effect, err = metadata.VerifyBucketPermission(ctx, bucketInfo, operator, req.ActionType, nil)
@@ -63,13 +66,14 @@ func (metadata *Metadata) VerifyPermission(ctx context.Context, req *storagetype
 			log.CtxErrorw(ctx, "failed to verify bucket permission", "error", err)
 			return nil, err
 		}
+		log.Debugf("VerifyBucketPermission result: effect: %s", effect.String())
 	} else {
-		objectInfo, err = metadata.bsDB.GetObjectByName(req.BucketName, req.ObjectName, true)
+		objectInfo, err = metadata.bsDB.GetObjectByName(req.ObjectName, req.BucketName, true)
 		if err != nil {
 			log.CtxErrorw(ctx, "failed to get object info", "error", err)
 			return nil, err
 		}
-		if objectInfo == nil {
+		if objectInfo == nil || objectInfo.Removed {
 			log.CtxError(ctx, "no such object")
 			return nil, errors.ErrNoSuchObject
 		}
@@ -85,9 +89,15 @@ func (metadata *Metadata) VerifyPermission(ctx context.Context, req *storagetype
 	return resp, nil
 }
 
-// VerifyBucketPermission verify bucket permission
+// VerifyBucketPermission Bucket permissions checks are divided into three steps:
+// First, if the bucket is a public bucket and the action is a read-only action, it returns "allow".
+// Second, if the operator is the owner of the bucket, it returns "allow", as the owner has the highest permission.
+// Third, verify the policy corresponding to the bucket and the operator.
+//  1. If the policy is evaluated as "allow", return "allow" to the user.
+//  2. If it is evaluated as "deny" or "unspecified", return "deny".
 func (metadata *Metadata) VerifyBucketPermission(ctx context.Context, bucketInfo *bsdb.Bucket, operator sdk.AccAddress,
 	action permtypes.ActionType, options *permtypes.VerifyOptions) (permtypes.Effect, error) {
+	log.Debugf("VerifyBucketPermission request: bucketInfo:%v, operator: %s  action:%s, options: %v", bucketInfo, operator.String(), action.String(), options)
 	var (
 		err    error
 		owner  sdk.AccAddress
@@ -96,17 +106,19 @@ func (metadata *Metadata) VerifyBucketPermission(ctx context.Context, bucketInfo
 
 	// if bucket is public, anyone can read but can not write it.
 	if bucketInfo.Visibility == storagetypes.VISIBILITY_TYPE_PUBLIC_READ.String() && keeper.PublicReadBucketAllowedActions[action] {
+		log.Debugf("check bucket visibility and public read actions is true")
 		return permtypes.EFFECT_ALLOW, nil
 	}
 
 	owner, err = sdk.AccAddressFromHexUnsafe(bucketInfo.Owner.String())
 	if err != nil {
-		log.CtxErrorw(ctx, "failed to creates an AccAddress from a HEX-encoded string", "bucketInfo.Owner.String()", bucketInfo.Owner.String(), "error", err)
+		log.CtxErrorw(ctx, "failed to creates an AccAddress from a HEX-encoded string", "error", err)
 		return permtypes.EFFECT_DENY, err
 	}
 
-	// the owner has full permissions
+	// The owner has full permissions
 	if operator.Equals(owner) {
+		log.Debugf("The owner has full permissions, operator:%s, owner:%s", operator.String(), owner.String())
 		return permtypes.EFFECT_ALLOW, nil
 	}
 
@@ -144,15 +156,15 @@ func (metadata *Metadata) VerifyObjectPermission(ctx context.Context, bucketInfo
 	if visibility && keeper.PublicReadObjectAllowedActions[action] {
 		return permtypes.EFFECT_ALLOW, nil
 	}
-
-	// the owner has full permissions
+	// The owner has full permissions
 	ownerAcc, err = sdk.AccAddressFromHexUnsafe(objectInfo.Owner.String())
 	if err != nil {
 		log.CtxErrorw(ctx, "failed to creates an AccAddress from a HEX-encoded string", "objectInfo.Owner.String()", objectInfo.Owner.String(), "error", err)
 		return permtypes.EFFECT_DENY, err
 	}
-
+	log.Debugf("AccAddressFromHexUnsafe result: ownerAcc: %s", ownerAcc.String())
 	if ownerAcc.Equals(operator) {
+		log.Debugf("ownerAcc.Equals(operator)")
 		return permtypes.EFFECT_ALLOW, nil
 	}
 
@@ -165,6 +177,7 @@ func (metadata *Metadata) VerifyObjectPermission(ctx context.Context, bucketInfo
 		log.CtxErrorw(ctx, "failed to verify object policy", "error", err)
 		return permtypes.EFFECT_DENY, err
 	}
+	log.Debugf("VerifyPolicy result: bucketEffect: %s", bucketEffect.String())
 
 	objectEffect, err = metadata.VerifyPolicy(ctx, math.NewUintFromBigInt(objectInfo.ObjectID.Big()), gnfdresource.RESOURCE_TYPE_OBJECT, operator, action,
 		nil)
@@ -172,8 +185,10 @@ func (metadata *Metadata) VerifyObjectPermission(ctx context.Context, bucketInfo
 		log.CtxErrorw(ctx, "failed to verify object policy", "error", err)
 		return permtypes.EFFECT_DENY, err
 	}
+	log.Debugf("VerifyPolicy result: objectEffect: %s", objectEffect.String())
 
 	if bucketEffect == permtypes.EFFECT_ALLOW || objectEffect == permtypes.EFFECT_ALLOW {
+		log.Debugf("bucketEffect == permtypes.EFFECT_ALLOW || objectEffect == permtypes.EFFECT_ALLOW,bucketEffect = %s,objectEffect = %s", bucketEffect, objectEffect)
 		return permtypes.EFFECT_ALLOW, nil
 	}
 	return permtypes.EFFECT_DENY, nil
@@ -182,6 +197,7 @@ func (metadata *Metadata) VerifyObjectPermission(ctx context.Context, bucketInfo
 // VerifyPolicy verify policy of permission
 func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint, resourceType resource.ResourceType,
 	operator sdk.AccAddress, action permtypes.ActionType, opts *permtypes.VerifyOptions) (permtypes.Effect, error) {
+	log.Debugf("VerifyPolicy request: resourceID:%s, resourceType: %s  operator:%s, action: %v, opts:%v", resourceID.String(), resourceType.String(), operator.String(), action.String(), opts)
 	var (
 		err                    error
 		allowed                bool
@@ -197,77 +213,94 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 	)
 
 	// verify policy which grant permission to account
-	permission, err = metadata.bsDB.GetPermissionByResourceAndPrincipal(resourceType.String(), resourceID.String(), permtypes.PRINCIPAL_TYPE_GNFD_ACCOUNT.String(), operator.String())
-	if err != nil || permission == nil {
+
+	permission, err = metadata.bsDB.GetPermissionByResourceAndPrincipal(resourceType.String(), permtypes.PRINCIPAL_TYPE_GNFD_ACCOUNT.String(), operator.String(), common.BigToHash(resourceID.BigInt()))
+	if err != nil {
 		log.CtxErrorw(ctx, "failed to get permission by resource and principal", "error", err)
 		return permtypes.EFFECT_DENY, err
 	}
-
-	accountPolicyID = append(accountPolicyID, permission.PolicyID)
-	statements, err = metadata.bsDB.GetStatementsByPolicyID(accountPolicyID)
-	if err != nil || statements == nil {
-		log.CtxErrorw(ctx, "failed to get statements by policy id", "error", err)
-		return permtypes.EFFECT_DENY, err
+	log.Debugf("GetPermissionByResourceAndPrincipal result: permission: %v", permission)
+	if permission != nil {
+		accountPolicyID = append(accountPolicyID, permission.PolicyID)
+		statements, err = metadata.bsDB.GetStatementsByPolicyID(accountPolicyID)
+		if err != nil {
+			log.CtxErrorw(ctx, "failed to get statements by policy id", "error", err)
+			return permtypes.EFFECT_DENY, err
+		}
+		log.Debugf("GetStatementsByPolicyID result: statements: %v", statements)
 	}
-
-	effect = permission.Eval(action, time.Now(), opts, statements)
-	if effect != permtypes.EFFECT_UNSPECIFIED {
-		return effect, nil
+	if statements != nil {
+		effect = permission.Eval(action, time.Now(), opts, statements)
+		log.Debugf("Permission Eval Result: effect:%s", effect.String())
+		if effect != permtypes.EFFECT_UNSPECIFIED {
+			return effect, nil
+		}
 	}
-
+	log.Debugf("account permission.Eval result: effect: %s", effect.String())
 	// verify policy which grant permission to group
-	permissions, err = metadata.bsDB.GetPermissionsByResourceAndPrincipleType(resourceType.String(), resourceID.String(), permtypes.PRINCIPAL_TYPE_GNFD_GROUP.String())
-	if err != nil || permissions == nil {
+	log.Debugf("GetPermissionsByResourceAndPrincipleType request: %s,%s,%s", resourceType.String(), common.BigToHash(resourceID.BigInt()).String(), permtypes.PRINCIPAL_TYPE_GNFD_GROUP.String())
+	permissions, err = metadata.bsDB.GetPermissionsByResourceAndPrincipleType(resourceType.String(), permtypes.PRINCIPAL_TYPE_GNFD_GROUP.String(), common.BigToHash(resourceID.BigInt()))
+	if err != nil {
 		log.CtxErrorw(ctx, "failed to get permission by resource and principle type", "error", err)
 		return permtypes.EFFECT_DENY, err
 	}
+	log.Debugf("GetPermissionsByResourceAndPrincipleType response: %v", permissions)
+	if permissions != nil {
+		groupIDList := make([]common.Hash, len(permissions))
+		for i, perm := range permissions {
+			groupIDList[i] = common.BigToHash(math.NewUintFromString(perm.PrincipalValue).BigInt())
+		}
 
-	groupIDList := make([]common.Hash, len(permissions))
-	for i, perm := range permissions {
-		groupIDList[i] = common.HexToHash(perm.PrincipalValue)
-	}
-
-	// filter group id by account
-	groups, err = metadata.bsDB.GetGroupsByGroupIDAndAccount(groupIDList, common.HexToHash(operator.String()))
-	if err != nil || groups == nil {
-		log.CtxErrorw(ctx, "failed to get groups by group id and account", "error", err)
-		return permtypes.EFFECT_DENY, err
-	}
-
-	// store the group id into map
-	for _, group := range groups {
-		groupIDMap[group.GroupID] = true
-	}
-
-	// use group id map to filter the above permission list and get the permissions which related to the specific account
-	for _, perm := range permissions {
-		_, ok := groupIDMap[common.HexToHash(perm.PrincipalValue)]
-		if ok {
-			policyIDList = append(policyIDList, perm.PolicyID)
-			filteredPermissionList = append(filteredPermissionList, perm)
+		// filter group id by account
+		groups, err = metadata.bsDB.GetGroupsByGroupIDAndAccount(groupIDList, common.HexToAddress(operator.String()))
+		if err != nil {
+			log.CtxErrorw(ctx, "failed to get groups by group id and account", "error", err)
+			return permtypes.EFFECT_DENY, err
+		}
+		log.Debugf("GetGroupsByGroupIDAndAccount result: group: %v", groups)
+		if groups != nil {
+			// store the group id into map
+			for _, group := range groups {
+				groupIDMap[group.GroupID] = true
+				log.Debugf("groupIDMap[group.GroupID] = true: group.GroupID: %s", group.GroupID.String())
+			}
+			// use group id map to filter the above permission list and get the permissions which related to the specific account
+			for _, perm := range permissions {
+				log.Debugf("common.BigToHash(math.NewUintFromString(perm.PrincipalValue).BigInt()): %s", common.BigToHash(math.NewUintFromString(perm.PrincipalValue).BigInt()).String())
+				_, ok := groupIDMap[common.BigToHash(math.NewUintFromString(perm.PrincipalValue).BigInt())]
+				if ok {
+					policyIDList = append(policyIDList, perm.PolicyID)
+					filteredPermissionList = append(filteredPermissionList, perm)
+				}
+			}
+			log.Debugf("GetGroupsByGroupIDAndAccount result: len policyIDList: %d, filteredPermissionList: %d", len(policyIDList), len(filteredPermissionList))
 		}
 	}
 
+	// statements
 	statements, err = metadata.bsDB.GetStatementsByPolicyID(policyIDList)
-	if err != nil || statements == nil {
+	if err != nil {
 		log.CtxErrorw(ctx, "failed to get statements by policy id", "error", err)
 		return permtypes.EFFECT_DENY, err
 	}
-
-	// eval permission and get effect result
-	for _, perm := range filteredPermissionList {
-		effect = perm.Eval(action, time.Now(), opts, statements)
-		if effect != permtypes.EFFECT_UNSPECIFIED {
-			if effect == permtypes.EFFECT_ALLOW {
-				allowed = true
-			} else if effect == permtypes.EFFECT_DENY {
-				return permtypes.EFFECT_DENY, nil
+	if statements != nil {
+		log.Debugf("GetStatementsByPolicyID result: statements: %v", statements)
+		for _, perm := range filteredPermissionList {
+			effect = perm.Eval(action, time.Now(), opts, statements)
+			log.Debugf("group permission eval result: effect: %s", effect.String())
+			if effect != permtypes.EFFECT_UNSPECIFIED {
+				if effect == permtypes.EFFECT_ALLOW {
+					allowed = true
+				} else if effect == permtypes.EFFECT_DENY {
+					return permtypes.EFFECT_DENY, nil
+				}
 			}
+		}
+		log.Debugf("if allowed %t", allowed)
+		if allowed {
+			return permtypes.EFFECT_ALLOW, nil
 		}
 	}
 
-	if allowed {
-		return permtypes.EFFECT_ALLOW, nil
-	}
 	return permtypes.EFFECT_UNSPECIFIED, nil
 }

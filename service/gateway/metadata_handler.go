@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"github.com/bnb-chain/greenfield/x/storage/types"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/bnb-chain/greenfield/types/s3util"
+	types2 "github.com/bnb-chain/greenfield/x/permission/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/jsonpb"
 
@@ -315,6 +318,63 @@ func (gateway *Gateway) getBucketMetaHandler(w http.ResponseWriter, r *http.Requ
 	if err = m.Marshal(&b, resp); err != nil {
 		log.Errorf("failed to get bucket metadata", "error", err)
 		errDescription = makeErrorDescription(err)
+		return
+	}
+
+	w.Header().Set(model.ContentTypeHeader, model.ContentTypeJSONHeaderValue)
+	w.Write(b.Bytes())
+}
+
+func (gateway *Gateway) verifyPermission(w http.ResponseWriter, r *http.Request) {
+	var (
+		err            error
+		b              bytes.Buffer
+		errDescription *errorDescription
+		reqContext     *requestContext
+		actionType     int64
+	)
+	reqContext = newRequestContext(r)
+	defer func() {
+		if errDescription != nil {
+			_ = errDescription.errorJSONResponse(w, reqContext)
+		}
+		if errDescription != nil && errDescription.statusCode != http.StatusOK {
+			log.Errorf("action(%v) statusCode(%v) %v", getUserBucketsRouterName, errDescription.statusCode, reqContext.generateRequestDetail())
+		} else {
+			log.Infof("action(%v) statusCode(200) %v", getUserBucketsRouterName, reqContext.generateRequestDetail())
+		}
+	}()
+
+	if gateway.metadata == nil {
+		log.Error("failed to failed to verify permission due to not config metadata")
+		errDescription = NotExistComponentError
+		return
+	}
+	queryParams := reqContext.request.URL.Query()
+	operator := queryParams.Get("operator")
+	bucketName := queryParams.Get("bucket")
+	objectName := queryParams.Get("object")
+	actionTypeStr := queryParams.Get("action")
+	actionType, _ = strconv.ParseInt(actionTypeStr, 10, 64)
+
+	log.Debugf("operator: %s, bucket: %s, object:%s, action_type: %d", operator, bucketName, objectName, actionType)
+
+	req := &types.QueryVerifyPermissionRequest{
+		Operator:   operator,
+		BucketName: bucketName,
+		ObjectName: objectName,
+		ActionType: types2.ActionType(actionType),
+	}
+	ctx := log.Context(context.Background(), req)
+	resp, err := gateway.metadata.VerifyPermission(ctx, req)
+	if err != nil {
+		log.Errorf("failed to verify permission", "error", err)
+		return
+	}
+
+	m := jsonpb.Marshaler{EmitDefaults: true, OrigName: true}
+	if err = m.Marshal(&b, resp); err != nil {
+		log.Errorf("failed to verify permission", "error", err)
 		return
 	}
 
