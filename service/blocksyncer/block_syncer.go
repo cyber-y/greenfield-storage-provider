@@ -221,19 +221,20 @@ func (s *BlockSyncer) Name() string {
 // Start running BlockSyncer service
 func (s *BlockSyncer) Start(ctx context.Context) error {
 	if s.running.Swap(true) == true {
-		return errors.New("block syncer hub has already started")
+		return errors.New("block syncer has already started")
 	}
 
 	determineMainService()
 
 	CtxMain, CancelMain = context.WithCancel(context.Background())
-	ctxBackup := context.Background()
-	BackupService.context = ctxBackup
 
 	go MainService.serve(CtxMain)
 
 	//create backup blocksyncer
 	if NeedBackup {
+		ctxBackup := context.Background()
+		BackupService.context = ctxBackup
+
 		go BackupService.serve(ctxBackup)
 		go CheckProgress()
 	}
