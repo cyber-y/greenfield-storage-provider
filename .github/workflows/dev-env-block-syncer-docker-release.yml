@@ -49,5 +49,5 @@ jobs:
 
       - name: Push image
         run: |
-          docker tag $IMAGE_NAME $IMAGE_NAME:block-syncer-adapt-v0.47-2
-          docker push $IMAGE_NAME:block-syncer-adapt-v0.47-2
+          docker tag $IMAGE_NAME $IMAGE_NAME:block-syncer-adapt-v0.47-3
+          docker push $IMAGE_NAME:block-syncer-adapt-v0.47-3
