@@ -92,6 +92,14 @@ func (g *Gateway) registerHandler(r *mux.Router) {
 		Methods(http.MethodGet).
 		Path("/").
 		HandlerFunc(g.getUserBucketsHandler)
+	bucketListRouter.NewRoute().
+		Name("ListExpiredBucketsBySp").
+		Methods(http.MethodGet).
+		Path("/expired").
+		Queries("create_at", "{create_at}",
+			"primary_sp_address", "{primary_sp_address}",
+			"limit", "{limit}").
+		HandlerFunc(g.listExpiredBucketsBySpHandler)
 
 	// admin router, path style
 	r.Path(model.GetApprovalPath).

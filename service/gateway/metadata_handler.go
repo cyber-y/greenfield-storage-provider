@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/bnb-chain/greenfield/types/s3util"
@@ -193,6 +194,68 @@ func (gateway *Gateway) listObjectsByBucketNameHandler(w http.ResponseWriter, r 
 	m := jsonpb.Marshaler{EmitDefaults: true, OrigName: true, EnumsAsInts: true}
 	if err = m.Marshal(&b, resp); err != nil {
 		log.Errorf("failed to list objects by bucket name", "error", err)
+		errDescription = makeErrorDescription(err)
+		return
+	}
+
+	w.Header().Set(model.ContentTypeHeader, model.ContentTypeJSONHeaderValue)
+	w.Write(b.Bytes())
+}
+
+// listExpiredBucketsBySpHandler handle list expired buckets by sp request
+func (gateway *Gateway) listExpiredBucketsBySpHandler(w http.ResponseWriter, r *http.Request) {
+	var (
+		err              error
+		b                bytes.Buffer
+		errDescription   *errorDescription
+		reqContext       *requestContext
+		createAt         string
+		primarySpAddress string
+		limit            string
+		queryParams      url.Values
+	)
+
+	reqContext = newRequestContext(r)
+	defer func() {
+		if errDescription != nil {
+			_ = errDescription.errorJSONResponse(w, reqContext)
+		}
+		if errDescription != nil && errDescription.statusCode != http.StatusOK {
+			log.Errorf("action(%v) statusCode(%v) %v", "listExpiredBucketsBySpHandler", errDescription.statusCode, reqContext.generateRequestDetail())
+		} else {
+			log.Infof("action(%v) statusCode(200) %v", "listExpiredBucketsBySpHandler", reqContext.generateRequestDetail())
+		}
+	}()
+
+	if gateway.metadata == nil {
+		log.Error("failed to list expired buckets by sp due to not config metadata")
+		errDescription = NotExistComponentError
+		return
+	}
+
+	queryParams = reqContext.request.URL.Query()
+	createAt = queryParams.Get("create_at")
+	primarySpAddress = queryParams.Get("primary_sp_address")
+	limit = queryParams.Get("limit")
+
+	createAtInt64, err := strconv.ParseInt(createAt, 10, 64)
+	limitInt64, err := strconv.ParseInt(limit, 10, 64)
+
+	ctx := log.Context(context.Background())
+	resp, err := gateway.metadata.ListExpiredBucketsBySp(ctx, createAtInt64, primarySpAddress, limitInt64)
+	if err != nil {
+		log.Errorf("failed to list objects by bucket name", "error", err)
+		errDescription = makeErrorDescription(err)
+		return
+	}
+
+	response := metatypes.ListExpiredBucketsBySpResponse{
+		Buckets: resp,
+	}
+
+	m := jsonpb.Marshaler{EmitDefaults: true, OrigName: true, EnumsAsInts: true}
+	if err = m.Marshal(&b, &response); err != nil {
+		log.Errorf("failed to list expired buckets by sp", "error", err)
 		errDescription = makeErrorDescription(err)
 		return
 	}
