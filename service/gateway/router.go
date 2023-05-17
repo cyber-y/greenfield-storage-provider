@@ -106,7 +106,7 @@ func (g *Gateway) registerHandler(r *mux.Router) {
 
 	r.Name("verifyPermission").
 		Methods(http.MethodGet).
-		Path("/verify/{operator:.+}/{bucket:.+}/{object.+}/{action:.+}").
+		Path("/verify/{operator:.+}/{bucket:.+}/{object:.+}/{action:.+}").
 		HandlerFunc(g.verifyPermission)
 
 	// admin router, path style
