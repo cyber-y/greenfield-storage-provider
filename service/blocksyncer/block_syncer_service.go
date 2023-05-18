@@ -65,6 +65,7 @@ func Cast(indexer parser.Indexer) *Impl {
 
 func CheckProgress() {
 	for {
+		time.Sleep(time.Minute * model.DefaultCheckDiffPeriod)
 		epochMaster, err := MainService.parserCtx.Database.GetEpoch(context.TODO())
 		if err != nil {
 			continue
@@ -78,7 +79,6 @@ func CheckProgress() {
 			StopMainService()
 			break
 		}
-		time.Sleep(time.Minute * model.DefaultCheckDiffPeriod)
 	}
 }
 
