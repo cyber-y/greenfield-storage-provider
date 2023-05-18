@@ -55,17 +55,10 @@ require (
 )
 
 require (
-	github.com/cilium/ebpf v0.10.0 // indirect
-	github.com/cosiner/argv v0.1.0 // indirect
 	github.com/cosmos/cosmos-proto v1.0.0-beta.1 // indirect
-	github.com/derekparker/trie v0.0.0-20221221181808-1424fce0c981 // indirect
-	github.com/go-delve/delve v1.20.2 // indirect
-	github.com/go-delve/liner v1.2.3-0.20220127212407-d32d89dd2a5d // indirect
-	github.com/google/go-dap v0.8.0 // indirect
+	github.com/frankban/quicktest v1.14.4 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
-	go.starlark.net v0.0.0-20230302034142-4b1e35fe2254 // indirect
-	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/mod v0.9.0 // indirect
 	golang.org/x/tools v0.7.0 // indirect
 )

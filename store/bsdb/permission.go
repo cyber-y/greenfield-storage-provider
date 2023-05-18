@@ -18,7 +18,7 @@ func (b *BsDBImpl) GetPermissionByResourceAndPrincipal(resourceType, resourceID,
 
 	err = b.db.Table((&Permission{}).TableName()).
 		Select("*").
-		Where("resource_type = ? and resource_id = ? and principal_type = ? and principal_value = ?", resourceType, resourceID, principalType, principalValue).
+		Where("resource_type = ? and resource_id = ? and principal_type = ? and principal_value = ?", resourceType, resourceID, permtypes.PrincipalType_value[principalType], principalValue).
 		Take(&permission).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
@@ -49,7 +49,7 @@ func (b *BsDBImpl) GetPermissionsByResourceAndPrincipleType(resourceType, resour
 
 	err = b.db.Table((&Permission{}).TableName()).
 		Select("*").
-		Where("resource_type = ? and resource_id = ? and principal_type = ?", resourceType, resourceID, principalType).
+		Where("resource_type = ? and resource_id = ? and principal_type = ?", resourceType, resourceID, permtypes.PrincipalType_value[principalType]).
 		Find(&permissions).Error
 	return permissions, err
 }
