@@ -1,0 +1,3 @@
+{"t":"2023-05-18T15:34:06.139+0800","l":"error","caller":"sqldb/store.go:41","msg":"gorm failed to open db","error":"Error 1045 (28000): Access denied for user '127.0.0.1'@'localhost' (using password: YES)"}
+{"t":"2023-05-18T15:34:06.139+0800","l":"error","caller":"gfspapp/app_options.go:363","msg":"failed to apply base app opt","error":"Error 1045 (28000): Access denied for user '127.0.0.1'@'localhost' (using password: YES)"}
+{"t":"2023-05-18T15:34:06.139+0800","l":"error","caller":"storage_provider/main.go:205","msg":"failed to init gf-sp app","error":"Error 1045 (28000): Access denied for user '127.0.0.1'@'localhost' (using password: YES)"}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/bnb-chain/greenfield-storage-provider/modular/blocksyncer"
 	"os"
 
 	"github.com/pelletier/go-toml/v2"
@@ -151,6 +152,7 @@ func registerModular() {
 	gfspapp.RegisterModular(retriever.RetrieveModularName, retriever.RetrieveModularDescription, retriever.NewRetrieveModular)
 	gfspapp.RegisterModular(module.SignerModularName, module.SignerModularDescription, singer.NewSingModular)
 	gfspapp.RegisterModular(module.UploadModularName, module.UploadModularDescription, uploader.NewUploadModular)
+	gfspapp.RegisterModular(module.BlockSyncerModularName, module.BlockSyncerModularDescription, blocksyncer.NewBlockSyncerModular)
 }
 
 func initLog(ctx *cli.Context, cfg *gfspconfig.GfSpConfig) error {
