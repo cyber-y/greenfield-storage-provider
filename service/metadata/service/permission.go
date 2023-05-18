@@ -68,7 +68,7 @@ func (metadata *Metadata) VerifyPermission(ctx context.Context, req *storagetype
 		}
 		log.Debugf("VerifyBucketPermission result: effect: %s", effect.String())
 	} else {
-		objectInfo, err = metadata.bsDB.GetObjectByName(req.BucketName, req.ObjectName, true)
+		objectInfo, err = metadata.bsDB.GetObjectByName(req.ObjectName, req.BucketName, true)
 		if err != nil {
 			log.CtxErrorw(ctx, "failed to get object info", "error", err)
 			return nil, err
