@@ -54,7 +54,7 @@ func (metadata *Metadata) VerifyPermission(ctx context.Context, req *storagetype
 		log.CtxErrorw(ctx, "failed to get bucket info", "error", err)
 		return nil, err
 	}
-	if bucketInfo == nil {
+	if bucketInfo == nil || bucketInfo.Removed {
 		log.CtxError(ctx, "no such bucket")
 		return nil, errors.ErrNoSuchBucket
 	}
@@ -73,7 +73,7 @@ func (metadata *Metadata) VerifyPermission(ctx context.Context, req *storagetype
 			log.CtxErrorw(ctx, "failed to get object info", "error", err)
 			return nil, err
 		}
-		if objectInfo == nil {
+		if objectInfo == nil || objectInfo.Removed {
 			log.CtxError(ctx, "no such object")
 			return nil, errors.ErrNoSuchObject
 		}
