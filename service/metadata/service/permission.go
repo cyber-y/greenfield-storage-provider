@@ -214,7 +214,7 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 
 	// verify policy which grant permission to account
 
-	permission, err = metadata.bsDB.GetPermissionByResourceAndPrincipal(resourceType.String(), common.BigToHash(resourceID.BigInt()).String(), permtypes.PRINCIPAL_TYPE_GNFD_ACCOUNT.String(), operator.String())
+	permission, err = metadata.bsDB.GetPermissionByResourceAndPrincipal(resourceType.String(), permtypes.PRINCIPAL_TYPE_GNFD_ACCOUNT.String(), operator.String(), common.BigToHash(resourceID.BigInt()))
 	if err != nil || permission == nil {
 		log.CtxErrorw(ctx, "failed to get permission by resource and principal", "error", err)
 		return permtypes.EFFECT_DENY, err
@@ -236,7 +236,7 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 	log.Debugf("account permission.Eval result: effect: %s", effect.String())
 	// verify policy which grant permission to group
 	log.Debugf("GetPermissionsByResourceAndPrincipleType request: %s,%s,%s", resourceType.String(), common.BigToHash(resourceID.BigInt()).String(), permtypes.PRINCIPAL_TYPE_GNFD_GROUP.String())
-	permissions, err = metadata.bsDB.GetPermissionsByResourceAndPrincipleType(resourceType.String(), common.BigToHash(resourceID.BigInt()), permtypes.PRINCIPAL_TYPE_GNFD_GROUP.String())
+	permissions, err = metadata.bsDB.GetPermissionsByResourceAndPrincipleType(resourceType.String(), permtypes.PRINCIPAL_TYPE_GNFD_GROUP.String(), common.BigToHash(resourceID.BigInt()))
 	if err != nil || permissions == nil {
 		log.CtxErrorw(ctx, "failed to get permission by resource and principle type", "error", err)
 		return permtypes.EFFECT_DENY, err
