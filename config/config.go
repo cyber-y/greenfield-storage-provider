@@ -63,15 +63,8 @@ var DefaultStorageProviderConfig = &StorageProviderConfig{
 		model.GatewayService,
 		model.UploaderService,
 		model.DownloaderService,
-		model.ChallengeService,
-		model.TaskNodeService,
-		model.ReceiverService,
-		model.SignerService,
 		model.MetadataService,
-		model.ManagerService,
-		model.P2PService,
-		model.AuthService,
-		model.StopServingService,
+		//model.BlockSyncerService,
 	},
 	ListenAddress: map[string]string{
 		model.GatewayService:    model.GatewayHTTPAddress,
@@ -86,7 +79,7 @@ var DefaultStorageProviderConfig = &StorageProviderConfig{
 		model.AuthService:       model.AuthGRPCAddress,
 	},
 	Endpoint: map[string]string{
-		model.GatewayService:    "gnfd.test-sp.com",
+		model.GatewayService:    "localhost:9033",
 		model.UploaderService:   model.UploaderGRPCAddress,
 		model.DownloaderService: model.DownloaderGRPCAddress,
 		model.ChallengeService:  model.ChallengeGRPCAddress,
@@ -160,11 +153,12 @@ var DefaultGreenfieldChainConfig = &gnfd.GreenfieldChainConfig{
 
 // DefaultBlockSyncerConfig defines the default configuration of BlockSyncer service
 var DefaultBlockSyncerConfig = &blocksyncer.Config{
-	Modules:        []string{"epoch", "bucket", "object", "payment"},
+	Modules:        []string{"epoch", "bucket", "object", "payment", "group", "permission", "storage_provider"},
 	Dsn:            "localhost:3308",
 	DsnSwitched:    "localhost:3308",
-	RecreateTables: false,
+	RecreateTables: true,
 	EnableDualDB:   false,
+	Workers:        10,
 }
 
 // DefaultMetricsConfig defines the default configuration of metrics service
