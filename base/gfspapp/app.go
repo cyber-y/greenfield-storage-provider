@@ -2,6 +2,7 @@ package gfspapp
 
 import (
 	"context"
+	"github.com/bnb-chain/greenfield-storage-provider/store/bsdb"
 	"syscall"
 
 	"google.golang.org/grpc"
@@ -28,6 +29,7 @@ type GfSpBaseApp struct {
 	client *gfspclient.GfSpClient
 
 	gfSpDB     spdb.SPDB
+	gfBsDB     bsdb.BSDB
 	pieceStore piecestore.PieceStore
 	pieceOp    piecestore.PieceOp
 	rcmgr      corercmgr.ResourceManager
@@ -94,6 +96,10 @@ func (g *GfSpBaseApp) OperateAddress() string {
 
 func (g *GfSpBaseApp) GfSpDB() spdb.SPDB {
 	return g.gfSpDB
+}
+
+func (g *GfSpBaseApp) GfBsDB() bsdb.BSDB {
+	return g.gfBsDB
 }
 
 func (g *GfSpBaseApp) ServerForRegister() *grpc.Server {

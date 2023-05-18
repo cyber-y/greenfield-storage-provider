@@ -53,6 +53,25 @@ func (s *GfSpClient) ListDeletedObjectsByBlockNumberRange(
 	return resp.GetObjects(), uint64(resp.GetEndBlockNumber()), nil
 }
 
+func (s *GfSpClient) GetUserBuckets(
+	ctx context.Context,
+	account string,
+	opts ...grpc.DialOption) ([]*retrievertypes.Bucket, error) {
+	conn, err := s.Connection(ctx, s.metadataEndpoint, opts...)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	req := &retrievertypes.GfSpGetUserBucketsRequest{
+		AccountId: account,
+	}
+	resp, err := retrievertypes.NewGfSpRetrieverServiceClient(conn).GfSpGetUserBuckets(ctx, req)
+	if err != nil {
+		return nil, ErrRpcUnknown
+	}
+	return resp.GetBuckets(), nil
+}
+
 func (s *GfSpClient) GetBucketReadQuota(
 	ctx context.Context,
 	bucket *storagetypes.BucketInfo,

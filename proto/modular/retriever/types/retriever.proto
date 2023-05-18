@@ -8,6 +8,64 @@ import "base/types/gfsperrors/error.proto";
 
 option go_package = "github.com/bnb-chain/greenfield-storage-provider/modular/retriever/types";
 
+// Bucket is the structure for user bucket
+message Bucket {
+  // bucket_info defines the information of the bucket.
+  greenfield.storage.BucketInfo bucket_info = 1;
+  // removed defines the bucket is deleted or not
+  bool removed = 2;
+  // delete_at defines the block number when the bucket deleted.
+  int64 delete_at = 3;
+  // delete_reason defines the deleted reason of bucket
+  string delete_reason = 4;
+  // operator defines the operator address of bucket
+  string operator = 5;
+  // create_tx_hash defines the creation transaction hash of object
+  string create_tx_hash = 6;
+  // update_tx_hash defines the update transaction hash of object
+  string update_tx_hash = 7;
+  // update_at defines the block number when the object updated
+  int64 update_at = 8;
+  // update_time defines the block number when the object updated
+  int64 update_time = 9;
+}
+
+// Object is the structure for user object
+message Object {
+  // object_info defines the information of the object.
+  greenfield.storage.ObjectInfo object_info = 1;
+  // locked_balance defines locked balance of object
+  string locked_balance = 2;
+  // removed defines the object is deleted or not
+  bool removed = 3;
+  // update_at defines the block number when the object updated
+  int64 update_at = 4;
+  // delete_at defines the block number when the object deleted
+  int64 delete_at = 5;
+  // delete_reason defines the deleted reason of object
+  string delete_reason = 6;
+  // operator defines the operator address of object
+  string operator = 7;
+  // create_tx_hash defines the creation transaction hash of object
+  string create_tx_hash = 8;
+  // update_tx_hash defines the update transaction hash of object
+  string update_tx_hash = 9;
+  // seal_tx_hash defines the sealed transaction hash of object
+  string seal_tx_hash = 10;
+}
+
+// GfSpGetUserBucketsRequest is request type for the GfSpGetUserBuckets RPC method.
+message GfSpGetUserBucketsRequest {
+  // account_id is the account address of user
+  string account_id = 1;
+}
+
+// GfSpGetUserBucketsResponse is response type for the GfSpGetUserBuckets RPC method.
+message GfSpGetUserBucketsResponse {
+  // buckets defines the list of bucket
+  repeated Bucket buckets = 1;
+}
+
 // GetBucketReadQuotaRequest is request type for the GetBucketReadQuota RPC method.
 message GfSpGetBucketReadQuotaRequest {
   // bucket info from the greenfield chain
@@ -76,6 +134,7 @@ message GfSpQueryUploadProgressResponse {
 }
 
 service GfSpRetrieverService {
+  rpc GfSpGetUserBuckets(GfSpGetUserBucketsRequest) returns (GfSpGetUserBucketsResponse) {};
   rpc GfSpGetBucketReadQuota(GfSpGetBucketReadQuotaRequest) returns (GfSpGetBucketReadQuotaResponse) {};
   rpc GfSpListBucketReadRecord(GfSpListBucketReadRecordRequest) returns (GfSpListBucketReadRecordResponse) {};
   rpc GfSpQueryUploadProgress(GfSpQueryUploadProgressRequest) returns (GfSpQueryUploadProgressResponse) {};
