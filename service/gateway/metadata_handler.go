@@ -355,6 +355,8 @@ func (gateway *Gateway) verifyPermission(w http.ResponseWriter, r *http.Request)
 
 	actionType, _ = strconv.ParseInt(vars["action"], 10, 64)
 
+	log.Debugf("operator: %s, bucket: %s, object:%s, action_type: %d", vars["operator"], vars["bucket"], vars["object"], actionType)
+
 	req := &types.QueryVerifyPermissionRequest{
 		Operator:   vars["operator"],
 		BucketName: vars["bucket"],
