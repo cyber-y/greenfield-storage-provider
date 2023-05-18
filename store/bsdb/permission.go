@@ -10,7 +10,7 @@ import (
 )
 
 // GetPermissionByResourceAndPrincipal get permission by resource type & ID, principal type & value
-func (b *BsDBImpl) GetPermissionByResourceAndPrincipal(resourceType, resourceID, principalType, principalValue string) (*Permission, error) {
+func (b *BsDBImpl) GetPermissionByResourceAndPrincipal(resourceType, principalType, principalValue string, resourceID common.Hash) (*Permission, error) {
 	var (
 		permission *Permission
 		err        error
@@ -41,7 +41,7 @@ func (b *BsDBImpl) GetStatementsByPolicyID(policyIDList []common.Hash) ([]*State
 }
 
 // GetPermissionsByResourceAndPrincipleType get permission by resource type & ID, principal type
-func (b *BsDBImpl) GetPermissionsByResourceAndPrincipleType(resourceType, resourceID, principalType string) ([]*Permission, error) {
+func (b *BsDBImpl) GetPermissionsByResourceAndPrincipleType(resourceType, principalType string, resourceID common.Hash) ([]*Permission, error) {
 	var (
 		permissions []*Permission
 		err         error

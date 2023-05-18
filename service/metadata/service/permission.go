@@ -236,7 +236,7 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 	log.Debugf("account permission.Eval result: effect: %s", effect.String())
 	// verify policy which grant permission to group
 	log.Debugf("GetPermissionsByResourceAndPrincipleType request: %s,%s,%s", resourceType.String(), common.BigToHash(resourceID.BigInt()).String(), permtypes.PRINCIPAL_TYPE_GNFD_GROUP.String())
-	permissions, err = metadata.bsDB.GetPermissionsByResourceAndPrincipleType(resourceType.String(), common.BigToHash(resourceID.BigInt()).String(), permtypes.PRINCIPAL_TYPE_GNFD_GROUP.String())
+	permissions, err = metadata.bsDB.GetPermissionsByResourceAndPrincipleType(resourceType.String(), common.BigToHash(resourceID.BigInt()), permtypes.PRINCIPAL_TYPE_GNFD_GROUP.String())
 	if err != nil || permissions == nil {
 		log.CtxErrorw(ctx, "failed to get permission by resource and principle type", "error", err)
 		return permtypes.EFFECT_DENY, err
