@@ -19,6 +19,7 @@ require (
 	github.com/bnb-chain/greenfield-common/go v0.0.0-20230407104542-ed19e3666522
 	github.com/bytedance/gopkg v0.0.0-20221122125632-68358b8ecec6
 	github.com/cloudflare/cfssl v1.6.3
+	github.com/cometbft/cometbft v0.37.1
 	github.com/consensys/gnark-crypto v0.7.0
 	github.com/cosmos/cosmos-sdk v0.46.7
 	github.com/cosmos/gogoproto v1.4.6
@@ -167,7 +168,7 @@ require (
 	github.com/koron/go-ssdp v0.0.3 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
-	github.com/lib/pq v1.10.6
+	github.com/lib/pq v1.10.7
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
 	github.com/libp2p/go-cidranger v1.1.0 // indirect
 	github.com/libp2p/go-flow-metrics v0.1.0 // indirect
