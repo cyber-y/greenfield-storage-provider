@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/base64"
 	"github.com/bnb-chain/greenfield/x/storage/types"
-	"github.com/gorilla/mux"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -334,7 +333,6 @@ func (gateway *Gateway) verifyPermission(w http.ResponseWriter, r *http.Request)
 		reqContext     *requestContext
 		actionType     int64
 	)
-	vars := mux.Vars(r)
 	reqContext = newRequestContext(r)
 	defer func() {
 		if errDescription != nil {
@@ -352,15 +350,19 @@ func (gateway *Gateway) verifyPermission(w http.ResponseWriter, r *http.Request)
 		errDescription = NotExistComponentError
 		return
 	}
+	queryParams := reqContext.request.URL.Query()
+	operator := queryParams.Get("operator")
+	bucketName := queryParams.Get("bucket")
+	objectName := queryParams.Get("object")
+	actionTypeStr := queryParams.Get("action")
+	actionType, _ = strconv.ParseInt(actionTypeStr, 10, 64)
 
-	actionType, _ = strconv.ParseInt(vars["action"], 10, 64)
-
-	log.Debugf("operator: %s, bucket: %s, object:%s, action_type: %d", vars["operator"], vars["bucket"], vars["object"], actionType)
+	log.Debugf("operator: %s, bucket: %s, object:%s, action_type: %d", operator, bucketName, objectName, actionType)
 
 	req := &types.QueryVerifyPermissionRequest{
-		Operator:   vars["operator"],
-		BucketName: vars["bucket"],
-		ObjectName: vars["object"],
+		Operator:   operator,
+		BucketName: bucketName,
+		ObjectName: objectName,
 		ActionType: types2.ActionType(actionType),
 	}
 	ctx := log.Context(context.Background(), req)
