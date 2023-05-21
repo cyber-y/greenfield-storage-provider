@@ -26,7 +26,7 @@ func (g *GateModular) getBucketReadQuotaHandler(w http.ResponseWriter, r *http.R
 		}
 	}()
 	if reqCtx.NeedVerifySignature() {
-		accAddress, err := reqCtx.VerifySignature()
+		accAddress, err := g.VerifySignature(reqCtx)
 		if err != nil {
 			log.CtxErrorw(reqCtx.Context(), "failed to verify signature", "error", err)
 			return
@@ -104,7 +104,7 @@ func (g *GateModular) listBucketReadRecordHandler(w http.ResponseWriter, r *http
 		}
 	}()
 	if reqCtx.NeedVerifySignature() {
-		accAddress, err := reqCtx.VerifySignature()
+		accAddress, err := g.VerifySignature(reqCtx)
 		if err != nil {
 			log.CtxErrorw(reqCtx.Context(), "failed to verify signature", "error", err)
 			return

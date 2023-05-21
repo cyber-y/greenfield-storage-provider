@@ -39,7 +39,7 @@ func (g *GateModular) getApprovalHandler(w http.ResponseWriter, r *http.Request)
 		}
 	}()
 	if reqCtx.NeedVerifySignature() {
-		accAddress, err = reqCtx.VerifySignature()
+		accAddress, err = g.VerifySignature(reqCtx)
 		if err != nil {
 			log.CtxErrorw(reqCtx.Context(), "failed to verify signature", "error", err)
 			return
@@ -156,7 +156,7 @@ func (g *GateModular) challengeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	if reqCtx.NeedVerifySignature() {
-		accAddress, err = reqCtx.VerifySignature()
+		accAddress, err = g.VerifySignature(reqCtx)
 		if err != nil {
 			log.CtxErrorw(reqCtx.Context(), "failed to verify signature", "error", err)
 			return

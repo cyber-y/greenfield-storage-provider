@@ -52,6 +52,22 @@ type Authorizer interface {
 	Modular
 	// VerifyAuthorize verifies the operator authority.
 	VerifyAuthorize(ctx context.Context, auth AuthOpType, account, bucket, object string) (bool, error)
+
+	// VerifySignature
+	// v1 auth type
+
+	// v2 auth type
+
+	// personal sign type
+
+	// off-chain type
+
+	//// GetAuthNonce get the auth nonce for which the Dapp or client can generate EDDSA key pairs.
+	//GetAuthNonce(context.Context, *GetAuthNonceRequest) (*GetAuthNonceResponse, error)
+	//// UpdateUserPublicKey updates the user public key once the Dapp or client generates the EDDSA key pairs.
+	//UpdateUserPublicKey(context.Context, *UpdateUserPublicKeyRequest) (*UpdateUserPublicKeyResponse, error)
+	//// VerifyOffChainSignature verifies the signature signed by user's EDDSA private key.
+	//VerifyOffChainSignature(context.Context, *VerifyOffChainSignatureRequest) (*VerifyOffChainSignatureResponse, error)
 }
 
 // Approver is the interface to handle ask approval.
