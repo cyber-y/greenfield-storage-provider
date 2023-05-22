@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"github.com/bnb-chain/greenfield-storage-provider/base/types/gfsperrors"
 	"github.com/bnb-chain/greenfield-storage-provider/modular/retriever/types"
-	metatypes "github.com/bnb-chain/greenfield-storage-provider/service/metadata/types"
 	"github.com/bnb-chain/greenfield-storage-provider/util"
 	"github.com/bnb-chain/greenfield/types/s3util"
 	"net/http"
@@ -150,28 +149,50 @@ func (g *GateModular) listObjectsByBucketNameHandler(w http.ResponseWriter, r *h
 		continuationToken = requestStartAfter
 	}
 
-	req := &metatypes.ListObjectsByBucketNameRequest{
-		BucketName:        requestBucketName,
-		MaxKeys:           maxKeys,
-		StartAfter:        requestStartAfter,
-		ContinuationToken: continuationToken,
-		Delimiter:         requestDelimiter,
-		Prefix:            requestPrefix,
-	}
-	print(req)
-
-	//resp, err := g.baseApp.GfSpClient().GetUserBuckets(reqCtx.Context(), r.Header.Get(model.GnfdUserAddressHeader))
+	objects,
+		keyCount,
+		maxKeys,
+		isTruncated,
+		nextContinuationToken,
+		name,
+		prefix,
+		delimiter,
+		commonPrefixes,
+		continuationToken,
+		err :=
+		g.baseApp.GfSpClient().ListObjectsByBucketName(
+			reqCtx.Context(),
+			requestBucketName,
+			"",
+			maxKeys,
+			requestStartAfter,
+			continuationToken,
+			requestDelimiter,
+			requestPrefix)
 	if err != nil {
 		log.Errorf("failed to list objects by bucket name", "error", err)
 		return
 	}
 
-	//m := jsonpb.Marshaler{EmitDefaults: true, OrigName: true, EnumsAsInts: true}
-	//if err = m.Marshal(&b, resp); err != nil {
-	//	log.Errorf("failed to list objects by bucket name", "error", err)
-	//	return
-	//}
-	//
+	grpcResponse := &types.GfSpListObjectsByBucketNameResponse{
+		Objects:               objects,
+		KeyCount:              keyCount,
+		MaxKeys:               maxKeys,
+		IsTruncated:           isTruncated,
+		NextContinuationToken: nextContinuationToken,
+		Name:                  name,
+		Prefix:                prefix,
+		Delimiter:             delimiter,
+		CommonPrefixes:        commonPrefixes,
+		ContinuationToken:     continuationToken,
+	}
+
+	m := jsonpb.Marshaler{EmitDefaults: true, OrigName: true, EnumsAsInts: true}
+	if err = m.Marshal(&b, grpcResponse); err != nil {
+		log.Errorf("failed to list objects by bucket name", "error", err)
+		return
+	}
+
 	w.Header().Set(model.ContentTypeHeader, model.ContentTypeJSONHeaderValue)
 	w.Write(b.Bytes())
 }

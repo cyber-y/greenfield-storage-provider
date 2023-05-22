@@ -72,11 +72,11 @@ func (g *GateModular) RegisterHandler(router *mux.Router) {
 			model.StartTimestampUs, "{start_ts}",
 			model.EndTimestampUs, "{end_ts}").
 		HandlerFunc(g.listBucketReadRecordHandler)
-	//hostBucketRouter.NewRoute().
-	//	Name(listObjectsByBucketRouterName).
-	//	Methods(http.MethodGet).
-	//	Path("/").
-	//	HandlerFunc(g.listObjectsByBucketNameHandler)
+	hostBucketRouter.NewRoute().
+		Name(listObjectsByBucketRouterName).
+		Methods(http.MethodGet).
+		Path("/").
+		HandlerFunc(g.listObjectsByBucketNameHandler)
 	hostBucketRouter.NotFoundHandler = http.HandlerFunc(g.notFoundHandler)
 
 	// bucket list router, path style
@@ -150,11 +150,11 @@ func (g *GateModular) RegisterHandler(router *mux.Router) {
 			model.StartTimestampUs, "{start_ts}",
 			model.EndTimestampUs, "{end_ts}").
 		HandlerFunc(g.listBucketReadRecordHandler)
-	//pathBucketRouter.NewRoute().
-	//	Name(listObjectsByBucketRouterName).
-	//	Methods(http.MethodGet).
-	//	Path("/").
-	//	HandlerFunc(g.listObjectsByBucketNameHandler)
+	pathBucketRouter.NewRoute().
+		Name(listObjectsByBucketRouterName).
+		Methods(http.MethodGet).
+		Path("/").
+		HandlerFunc(g.listObjectsByBucketNameHandler)
 	pathBucketRouter.NotFoundHandler = http.HandlerFunc(g.notFoundHandler)
 
 	router.NotFoundHandler = http.HandlerFunc(g.notFoundHandler)
