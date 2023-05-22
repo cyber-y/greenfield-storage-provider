@@ -220,18 +220,21 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 		return permtypes.EFFECT_DENY, err
 	}
 	log.Debugf("GetPermissionByResourceAndPrincipal result: permission: %v", permission)
-
-	accountPolicyID = append(accountPolicyID, permission.PolicyID)
-	statements, err = metadata.bsDB.GetStatementsByPolicyID(accountPolicyID)
-	if err != nil {
-		log.CtxErrorw(ctx, "failed to get statements by policy id", "error", err)
-		return permtypes.EFFECT_DENY, err
+	if permission != nil {
+		accountPolicyID = append(accountPolicyID, permission.PolicyID)
+		statements, err = metadata.bsDB.GetStatementsByPolicyID(accountPolicyID)
+		if err != nil {
+			log.CtxErrorw(ctx, "failed to get statements by policy id", "error", err)
+			return permtypes.EFFECT_DENY, err
+		}
+		log.Debugf("GetStatementsByPolicyID result: statements: %v", statements)
 	}
-	log.Debugf("GetStatementsByPolicyID result: statements: %v", statements)
-	effect = permission.Eval(action, time.Now(), opts, statements)
-	log.Debugf("Permission Eval Result: effect:%s", effect.String())
-	if effect != permtypes.EFFECT_UNSPECIFIED {
-		return effect, nil
+	if statements != nil {
+		effect = permission.Eval(action, time.Now(), opts, statements)
+		log.Debugf("Permission Eval Result: effect:%s", effect.String())
+		if effect != permtypes.EFFECT_UNSPECIFIED {
+			return effect, nil
+		}
 	}
 	log.Debugf("account permission.Eval result: effect: %s", effect.String())
 	// verify policy which grant permission to group
@@ -242,34 +245,34 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 		return permtypes.EFFECT_DENY, err
 	}
 	log.Debugf("GetPermissionsByResourceAndPrincipleType response: %v", permissions)
-
-	groupIDList := make([]common.Hash, len(permissions))
-	for i, perm := range permissions {
-		groupIDList[i] = common.HexToHash(perm.PrincipalValue)
-	}
-
-	// filter group id by account
-	groups, err = metadata.bsDB.GetGroupsByGroupIDAndAccount(groupIDList, common.HexToHash(operator.String()))
-	if err != nil {
-		log.CtxErrorw(ctx, "failed to get groups by group id and account", "error", err)
-		return permtypes.EFFECT_DENY, err
-	}
-	log.Debugf("GetGroupsByGroupIDAndAccount result: group: %v", groups)
-
-	// store the group id into map
-	for _, group := range groups {
-		groupIDMap[group.GroupID] = true
-	}
-
-	// use group id map to filter the above permission list and get the permissions which related to the specific account
-	for _, perm := range permissions {
-		_, ok := groupIDMap[common.HexToHash(perm.PrincipalValue)]
-		if ok {
-			policyIDList = append(policyIDList, perm.PolicyID)
-			filteredPermissionList = append(filteredPermissionList, perm)
+	if permissions != nil {
+		groupIDList := make([]common.Hash, len(permissions))
+		for i, perm := range permissions {
+			groupIDList[i] = common.HexToHash(perm.PrincipalValue)
+		}
+		// filter group id by account
+		groups, err = metadata.bsDB.GetGroupsByGroupIDAndAccount(groupIDList, common.HexToHash(operator.String()))
+		if err != nil {
+			log.CtxErrorw(ctx, "failed to get groups by group id and account", "error", err)
+			return permtypes.EFFECT_DENY, err
+		}
+		log.Debugf("GetGroupsByGroupIDAndAccount result: group: %v", groups)
+		if groups != nil {
+			// store the group id into map
+			for _, group := range groups {
+				groupIDMap[group.GroupID] = true
+			}
+			// use group id map to filter the above permission list and get the permissions which related to the specific account
+			for _, perm := range permissions {
+				_, ok := groupIDMap[common.HexToHash(perm.PrincipalValue)]
+				if ok {
+					policyIDList = append(policyIDList, perm.PolicyID)
+					filteredPermissionList = append(filteredPermissionList, perm)
+				}
+			}
+			log.Debugf("GetGroupsByGroupIDAndAccount result: len policyIDList: %d, filteredPermissionList: %d", len(policyIDList), len(filteredPermissionList))
 		}
 	}
-	log.Debugf("GetGroupsByGroupIDAndAccount result: len policyIDList: %d, filteredPermissionList: %d", len(policyIDList), len(filteredPermissionList))
 
 	// statements
 	statements, err = metadata.bsDB.GetStatementsByPolicyID(policyIDList)
@@ -277,21 +280,24 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 		log.CtxErrorw(ctx, "failed to get statements by policy id", "error", err)
 		return permtypes.EFFECT_DENY, err
 	}
-	log.Debugf("GetStatementsByPolicyID result: statements: %v", statements)
-	for _, perm := range filteredPermissionList {
-		effect = perm.Eval(action, time.Now(), opts, statements)
-		log.Debugf("group permission eval result: effect: %s", effect.String())
-		if effect != permtypes.EFFECT_UNSPECIFIED {
-			if effect == permtypes.EFFECT_ALLOW {
-				allowed = true
-			} else if effect == permtypes.EFFECT_DENY {
-				return permtypes.EFFECT_DENY, nil
+	if statements != nil {
+		log.Debugf("GetStatementsByPolicyID result: statements: %v", statements)
+		for _, perm := range filteredPermissionList {
+			effect = perm.Eval(action, time.Now(), opts, statements)
+			log.Debugf("group permission eval result: effect: %s", effect.String())
+			if effect != permtypes.EFFECT_UNSPECIFIED {
+				if effect == permtypes.EFFECT_ALLOW {
+					allowed = true
+				} else if effect == permtypes.EFFECT_DENY {
+					return permtypes.EFFECT_DENY, nil
+				}
 			}
 		}
+		log.Debugf("if allowed %t", allowed)
+		if allowed {
+			return permtypes.EFFECT_ALLOW, nil
+		}
 	}
-	log.Debugf("if allowed %t", allowed)
-	if allowed {
-		return permtypes.EFFECT_ALLOW, nil
-	}
+
 	return permtypes.EFFECT_UNSPECIFIED, nil
 }
