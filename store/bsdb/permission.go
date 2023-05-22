@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/bnb-chain/greenfield-storage-provider/pkg/log"
 	permtypes "github.com/bnb-chain/greenfield/x/permission/types"
 	"github.com/forbole/juno/v4/common"
 	"gorm.io/gorm"
@@ -62,17 +63,22 @@ func (p Permission) Eval(action permtypes.ActionType, blockTime time.Time, opts 
 	)
 
 	// 1. the policy is expired, need delete
-	if p.ExpirationTime == 0 && time.Unix(p.ExpirationTime, 0).Before(blockTime) {
+	if p.ExpirationTime != 0 && time.Unix(p.ExpirationTime, 0).Before(blockTime) {
 		// Notice: We do not actively delete policies that expire for users.
 		return permtypes.EFFECT_UNSPECIFIED
 	}
+	log.Debugf("p.ExpirationTime： %d", p.ExpirationTime)
+	log.Debugf("time.Unix(p.ExpirationTime, 0).Before(blockTime)： %t", time.Unix(p.ExpirationTime, 0).Before(blockTime))
 
 	// 2. check all the statements
 	for _, s := range statements {
-		if s.ExpirationTime == 0 && time.Unix(s.ExpirationTime, 0).Before(blockTime) {
+		if s.ExpirationTime != 0 && time.Unix(s.ExpirationTime, 0).Before(blockTime) {
 			continue
 		}
+		log.Debugf("s.ExpirationTime： %d", s.ExpirationTime)
+		log.Debugf("time.Unix(s.ExpirationTime, 0).Before(blockTime)： %t", time.Unix(s.ExpirationTime, 0).Before(blockTime))
 		e = s.Eval(action, opts)
+		log.Debugf("s.Eval(action, opts): %s", e.String())
 		if e == permtypes.EFFECT_DENY {
 			return permtypes.EFFECT_DENY
 		} else if e == permtypes.EFFECT_ALLOW {

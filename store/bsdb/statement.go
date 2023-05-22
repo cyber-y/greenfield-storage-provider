@@ -3,9 +3,9 @@ package bsdb
 import (
 	"regexp"
 
-	permtypes "github.com/bnb-chain/greenfield/x/permission/types"
-
+	"github.com/bnb-chain/greenfield-storage-provider/pkg/log"
 	"github.com/bnb-chain/greenfield-storage-provider/service/metadata"
+	permtypes "github.com/bnb-chain/greenfield/x/permission/types"
 )
 
 // Eval is used to evaluate the execution results of statement policies.
@@ -42,10 +42,12 @@ func (s *Statement) Eval(action permtypes.ActionType, opts *permtypes.VerifyOpti
 			actions = append(actions, permtypes.ActionType(v))
 		}
 	}
+	log.Debugf("actions： %v", actions)
 
 	for _, act := range actions {
 		if act == action || act == permtypes.ACTION_TYPE_ALL {
 			// Action matched, if effect is deny, then return deny
+			log.Debugf("s.Effect", s.Effect)
 			if s.Effect == permtypes.EFFECT_DENY.String() {
 				return permtypes.EFFECT_DENY
 			}
