@@ -1,6 +1,7 @@
 package bsdb
 
 import (
+	"github.com/bnb-chain/greenfield-storage-provider/pkg/log"
 	"regexp"
 
 	permtypes "github.com/bnb-chain/greenfield/x/permission/types"
@@ -12,9 +13,11 @@ import (
 func (s *Statement) Eval(action permtypes.ActionType, opts *permtypes.VerifyOptions) permtypes.Effect {
 	// If 'resource' is not nil, it implies that the user intends to access a sub-resource, which would
 	// be specified in 's.Resources'. Therefore, if the sub-resource in the statement is nil, we will ignore this statement.
+	log.Debugf("opts.Resource： %s", opts.Resource)
 	if opts != nil && opts.Resource != "" && s.Resources == nil {
 		return permtypes.EFFECT_UNSPECIFIED
 	}
+
 	// If 'resource' is not nil, and 's.Resource' is also not nil, it indicates that we should verify whether
 	// the resource that the user intends to access matches any items in 's.Resource'
 	if opts != nil && opts.Resource != "" && s.Resources != nil {
@@ -42,10 +45,12 @@ func (s *Statement) Eval(action permtypes.ActionType, opts *permtypes.VerifyOpti
 			actions = append(actions, permtypes.ActionType(v))
 		}
 	}
+	log.Debugf("actions： %v", actions)
 
 	for _, act := range actions {
 		if act == action || act == permtypes.ACTION_TYPE_ALL {
 			// Action matched, if effect is deny, then return deny
+			log.Debugf("s.Effect", s.Effect)
 			if s.Effect == permtypes.EFFECT_DENY.String() {
 				return permtypes.EFFECT_DENY
 			}
