@@ -251,7 +251,7 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 			groupIDList[i] = common.HexToHash(perm.PrincipalValue)
 		}
 		// filter group id by account
-		groups, err = metadata.bsDB.GetGroupsByGroupIDAndAccount(groupIDList, common.HexToHash(operator.String()))
+		groups, err = metadata.bsDB.GetGroupsByGroupIDAndAccount(groupIDList, common.HexToAddress(operator.String()))
 		if err != nil {
 			log.CtxErrorw(ctx, "failed to get groups by group id and account", "error", err)
 			return permtypes.EFFECT_DENY, err
