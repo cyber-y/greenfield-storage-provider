@@ -215,17 +215,23 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 	// verify policy which grant permission to account
 
 	permission, err = metadata.bsDB.GetPermissionByResourceAndPrincipal(resourceType.String(), permtypes.PRINCIPAL_TYPE_GNFD_ACCOUNT.String(), operator.String(), common.BigToHash(resourceID.BigInt()))
-	if err != nil || permission == nil {
+	if err != nil {
 		log.CtxErrorw(ctx, "failed to get permission by resource and principal", "error", err)
 		return permtypes.EFFECT_DENY, err
+	}
+	if permission == nil {
+		return permtypes.EFFECT_UNSPECIFIED, nil
 	}
 	log.Debugf("GetPermissionByResourceAndPrincipal result: permission: %v", permission)
 
 	accountPolicyID = append(accountPolicyID, permission.PolicyID)
 	statements, err = metadata.bsDB.GetStatementsByPolicyID(accountPolicyID)
-	if err != nil || statements == nil {
+	if err != nil {
 		log.CtxErrorw(ctx, "failed to get statements by policy id", "error", err)
 		return permtypes.EFFECT_DENY, err
+	}
+	if statements == nil {
+		return permtypes.EFFECT_UNSPECIFIED, nil
 	}
 	log.Debugf("GetStatementsByPolicyID result: statements: %v", statements)
 	effect = permission.Eval(action, time.Now(), opts, statements)
@@ -237,9 +243,12 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 	// verify policy which grant permission to group
 	log.Debugf("GetPermissionsByResourceAndPrincipleType request: %s,%s,%s", resourceType.String(), common.BigToHash(resourceID.BigInt()).String(), permtypes.PRINCIPAL_TYPE_GNFD_GROUP.String())
 	permissions, err = metadata.bsDB.GetPermissionsByResourceAndPrincipleType(resourceType.String(), permtypes.PRINCIPAL_TYPE_GNFD_GROUP.String(), common.BigToHash(resourceID.BigInt()))
-	if err != nil || permissions == nil {
+	if err != nil {
 		log.CtxErrorw(ctx, "failed to get permission by resource and principle type", "error", err)
 		return permtypes.EFFECT_DENY, err
+	}
+	if permissions == nil {
+		return permtypes.EFFECT_UNSPECIFIED, nil
 	}
 	log.Debugf("GetPermissionsByResourceAndPrincipleType response: %v", permissions)
 
@@ -250,9 +259,12 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 
 	// filter group id by account
 	groups, err = metadata.bsDB.GetGroupsByGroupIDAndAccount(groupIDList, common.HexToHash(operator.String()))
-	if err != nil || groups == nil {
+	if err != nil {
 		log.CtxErrorw(ctx, "failed to get groups by group id and account", "error", err)
 		return permtypes.EFFECT_DENY, err
+	}
+	if groups == nil {
+		return permtypes.EFFECT_UNSPECIFIED, nil
 	}
 	log.Debugf("GetGroupsByGroupIDAndAccount result: group: %v", groups)
 
@@ -273,9 +285,12 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 
 	// statements
 	statements, err = metadata.bsDB.GetStatementsByPolicyID(policyIDList)
-	if err != nil || statements == nil {
+	if err != nil {
 		log.CtxErrorw(ctx, "failed to get statements by policy id", "error", err)
 		return permtypes.EFFECT_DENY, err
+	}
+	if statements == nil {
+		return permtypes.EFFECT_UNSPECIFIED, nil
 	}
 	log.Debugf("GetStatementsByPolicyID result: statements: %v", statements)
 	for _, perm := range filteredPermissionList {
