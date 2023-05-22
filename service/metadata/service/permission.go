@@ -219,9 +219,6 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 		log.CtxErrorw(ctx, "failed to get permission by resource and principal", "error", err)
 		return permtypes.EFFECT_DENY, err
 	}
-	if permission == nil {
-		return permtypes.EFFECT_UNSPECIFIED, nil
-	}
 	log.Debugf("GetPermissionByResourceAndPrincipal result: permission: %v", permission)
 
 	accountPolicyID = append(accountPolicyID, permission.PolicyID)
@@ -229,9 +226,6 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 	if err != nil {
 		log.CtxErrorw(ctx, "failed to get statements by policy id", "error", err)
 		return permtypes.EFFECT_DENY, err
-	}
-	if statements == nil {
-		return permtypes.EFFECT_UNSPECIFIED, nil
 	}
 	log.Debugf("GetStatementsByPolicyID result: statements: %v", statements)
 	effect = permission.Eval(action, time.Now(), opts, statements)
@@ -247,9 +241,6 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 		log.CtxErrorw(ctx, "failed to get permission by resource and principle type", "error", err)
 		return permtypes.EFFECT_DENY, err
 	}
-	if permissions == nil {
-		return permtypes.EFFECT_UNSPECIFIED, nil
-	}
 	log.Debugf("GetPermissionsByResourceAndPrincipleType response: %v", permissions)
 
 	groupIDList := make([]common.Hash, len(permissions))
@@ -262,9 +253,6 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 	if err != nil {
 		log.CtxErrorw(ctx, "failed to get groups by group id and account", "error", err)
 		return permtypes.EFFECT_DENY, err
-	}
-	if groups == nil {
-		return permtypes.EFFECT_UNSPECIFIED, nil
 	}
 	log.Debugf("GetGroupsByGroupIDAndAccount result: group: %v", groups)
 
@@ -288,9 +276,6 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 	if err != nil {
 		log.CtxErrorw(ctx, "failed to get statements by policy id", "error", err)
 		return permtypes.EFFECT_DENY, err
-	}
-	if statements == nil {
-		return permtypes.EFFECT_UNSPECIFIED, nil
 	}
 	log.Debugf("GetStatementsByPolicyID result: statements: %v", statements)
 	for _, perm := range filteredPermissionList {
