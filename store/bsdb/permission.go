@@ -24,9 +24,7 @@ func (b *BsDBImpl) GetPermissionByResourceAndPrincipal(resourceType, principalTy
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
-	for _, permission := range permissions {
-		log.Debugf("permission.ResourceType:%s,permission.ResourceID:%s,permission.PolicyID:%s,permission.PrincipalValue:%s", permission.ResourceType, permission.ResourceID.String(), permission.PolicyID.String(), permission.PrincipalValue)
-	}
+	log.Debugf("permission.ResourceType:%s,permission.ResourceID:%s,permission.PolicyID:%s,permission.PrincipalValue:%s", permission.ResourceType, permission.ResourceID.String(), permission.PolicyID.String(), permission.PrincipalValue)
 	return permission, err
 }
 
