@@ -24,6 +24,9 @@ func (b *BsDBImpl) GetPermissionByResourceAndPrincipal(resourceType, principalTy
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
+	for _, permission := range permissions {
+		log.Debugf("permission.ResourceType:%s,permission.ResourceID:%s,permission.PolicyID:%s,permission.PrincipalValue:%s", permission.ResourceType, permission.ResourceID.String(), permission.PolicyID.String(), permission.PrincipalValue)
+	}
 	return permission, err
 }
 
@@ -38,6 +41,9 @@ func (b *BsDBImpl) GetStatementsByPolicyID(policyIDList []common.Hash) ([]*State
 		Select("*").
 		Where("policy_id in ?", policyIDList).
 		Find(&statements).Error
+	for _, statement := range statements {
+		log.Debugf("statement.Effect:%s, statement.PolicyID.String():%s, statement.ActionValue:%d", statement.Effect, statement.PolicyID.String(), statement.ActionValue)
+	}
 	return statements, err
 }
 
@@ -52,6 +58,9 @@ func (b *BsDBImpl) GetPermissionsByResourceAndPrincipleType(resourceType, princi
 		Select("*").
 		Where("resource_type = ? and resource_id = ? and principal_type = ?", resourceType, resourceID, permtypes.PrincipalType_value[principalType]).
 		Find(&permissions).Error
+	for _, permission := range permissions {
+		log.Debugf("permission.ResourceType:%s,permission.ResourceID:%s,permission.PolicyID:%s,permission.PrincipalValue:%s", permission.ResourceType, permission.ResourceID.String(), permission.PolicyID.String(), permission.PrincipalValue)
+	}
 	return permissions, err
 }
 
