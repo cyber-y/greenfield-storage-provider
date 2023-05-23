@@ -24,6 +24,7 @@ type StorageFn func(cfg ObjectStorageConfig) (ObjectStorage, error)
 
 var storageMap = map[string]StorageFn{
 	mpiecestore.S3Store:       newS3Store,
+	mpiecestore.B2Store:       newB2Store,
 	mpiecestore.MinioStore:    newMinioStore,
 	mpiecestore.DiskFileStore: newDiskFileStore,
 	mpiecestore.MemoryStore:   newMemoryStore,
