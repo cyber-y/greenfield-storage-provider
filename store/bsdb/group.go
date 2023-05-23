@@ -1,6 +1,7 @@
 package bsdb
 
 import (
+	"github.com/bnb-chain/greenfield-storage-provider/pkg/log"
 	"github.com/forbole/juno/v4/common"
 )
 
@@ -10,10 +11,10 @@ func (b *BsDBImpl) GetGroupsByGroupIDAndAccount(groupIDList []common.Hash, accou
 		groups []*Group
 		err    error
 	)
-
+	log.Debugf("groupIDList %v, account:%s", groupIDList, account.String())
 	err = b.db.Table((&Group{}).TableName()).
 		Select("*").
-		Where("group_id in ? and account_id = ?", groupIDList, account).
+		Where("group_id in (?) and account_id = ?", groupIDList, account).
 		Find(&groups).Error
 	return groups, err
 }

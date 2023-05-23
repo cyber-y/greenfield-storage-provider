@@ -250,6 +250,7 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 		for i, perm := range permissions {
 			groupIDList[i] = common.HexToHash(perm.PrincipalValue)
 		}
+
 		// filter group id by account
 		groups, err = metadata.bsDB.GetGroupsByGroupIDAndAccount(groupIDList, common.HexToAddress(operator.String()))
 		if err != nil {

@@ -47,7 +47,7 @@ func (b *BsDBImpl) GetPermissionsByResourceAndPrincipleType(resourceType, princi
 		permissions []*Permission
 		err         error
 	)
-
+	log.Debugf("GetPermissionsByResourceAndPrincipleType resourceType:%s, principalType:%s, resourceID:%s", permissions, permtypes.PrincipalType_value[principalType], resourceID.String())
 	err = b.db.Table((&Permission{}).TableName()).
 		Select("*").
 		Where("resource_type = ? and resource_id = ? and principal_type = ?", resourceType, resourceID, permtypes.PrincipalType_value[principalType]).
