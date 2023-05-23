@@ -248,7 +248,7 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 	if permissions != nil {
 		groupIDList := make([]common.Hash, len(permissions))
 		for i, perm := range permissions {
-			groupIDList[i] = common.HexToHash(perm.PrincipalValue)
+			groupIDList[i] = common.BigToHash(math.NewUintFromString(perm.PrincipalValue).BigInt())
 		}
 
 		// filter group id by account
