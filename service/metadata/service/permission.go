@@ -262,10 +262,12 @@ func (metadata *Metadata) VerifyPolicy(ctx context.Context, resourceID math.Uint
 			// store the group id into map
 			for _, group := range groups {
 				groupIDMap[group.GroupID] = true
+				log.Debugf("groupIDMap[group.GroupID] = true: group.GroupID: %s", group.GroupID.String())
 			}
 			// use group id map to filter the above permission list and get the permissions which related to the specific account
 			for _, perm := range permissions {
-				_, ok := groupIDMap[common.HexToHash(perm.PrincipalValue)]
+				log.Debugf("common.BigToHash(math.NewUintFromString(perm.PrincipalValue).BigInt()): %s", common.BigToHash(math.NewUintFromString(perm.PrincipalValue).BigInt()).String())
+				_, ok := groupIDMap[common.BigToHash(math.NewUintFromString(perm.PrincipalValue).BigInt())]
 				if ok {
 					policyIDList = append(policyIDList, perm.PolicyID)
 					filteredPermissionList = append(filteredPermissionList, perm)
