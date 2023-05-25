@@ -253,6 +253,7 @@ func (b *BlockSyncerModular) quickFetchBlockData(startHeight uint64) {
 			log.Warnf("ProcessedQueue is closed")
 			return
 		}
+		log.Infof("processedHeight:%d, will process height:%d", processedHeight, count*cycle+startHeight)
 		if processedHeight != 0 && count*cycle+startHeight-processedHeight > 4*count {
 			continue
 		}
