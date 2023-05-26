@@ -5,12 +5,12 @@ import (
 	"encoding/base64"
 
 	"cosmossdk.io/math"
-	"github.com/bnb-chain/greenfield/types/s3util"
-	storage_types "github.com/bnb-chain/greenfield/x/storage/types"
 
 	"github.com/bnb-chain/greenfield-storage-provider/modular/metadata/types"
 	"github.com/bnb-chain/greenfield-storage-provider/pkg/log"
 	model "github.com/bnb-chain/greenfield-storage-provider/store/bsdb"
+	"github.com/bnb-chain/greenfield/types/s3util"
+	storage_types "github.com/bnb-chain/greenfield/x/storage/types"
 )
 
 // GfSpListObjectsByBucketName list objects info by a bucket name

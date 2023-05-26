@@ -10,10 +10,9 @@ import (
 	"github.com/forbole/juno/v4/parser"
 	"github.com/forbole/juno/v4/types/config"
 
-	db "github.com/bnb-chain/greenfield-storage-provider/modular/blocksyncer/database"
-
 	"github.com/bnb-chain/greenfield-storage-provider/base/gfspapp"
 	"github.com/bnb-chain/greenfield-storage-provider/core/rcmgr"
+	db "github.com/bnb-chain/greenfield-storage-provider/modular/blocksyncer/database"
 )
 
 var (

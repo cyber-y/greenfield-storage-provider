@@ -14,6 +14,7 @@ import (
 const (
 	approvalRouterName                    = "GetApproval"
 	putObjectRouterName                   = "PutObject"
+	putObjectByOffsetRouterName           = "PutObjectByOffset"
 	getObjectRouterName                   = "GetObject"
 	challengeRouterName                   = "Challenge"
 	replicateObjectPieceRouterName        = "ReplicateObjectPiece"
@@ -45,88 +46,77 @@ func (g *GateModular) notFoundHandler(w http.ResponseWriter, r *http.Request) {
 
 // RegisterHandler registers the handlers to the gateway router.
 func (g *GateModular) RegisterHandler(router *mux.Router) {
-	// bucket router, virtual-hosted style
-	hostBucketRouter := router.Host("{bucket:.+}." + g.domain).Subrouter()
-	hostBucketRouter.NewRoute().
-		Name(putObjectRouterName).
-		Methods(http.MethodPut).
-		Path("/{object:.+}").
-		HandlerFunc(g.putObjectHandler)
-	hostBucketRouter.NewRoute().
-		Name(queryUploadProgressRouterName).
-		Methods(http.MethodGet).
-		Path("/{object:.+}").
-		Queries(model.UploadProgressQuery, "").
-		HandlerFunc(g.queryUploadProgressHandler)
-	hostBucketRouter.NewRoute().
-		Name(getBucketMetaRouterName).
-		Methods(http.MethodGet).
-		Queries(model.GetBucketMetaQuery, "").
-		HandlerFunc(g.getBucketMetaHandler)
-	hostBucketRouter.NewRoute().
-		Name(getObjectMetaRouterName).
-		Methods(http.MethodGet).
-		Path("/{object:.+}").
-		Queries(model.GetObjectMetaQuery, "").
-		HandlerFunc(g.getObjectMetaHandler)
-	hostBucketRouter.NewRoute().
-		Name(getObjectRouterName).
-		Methods(http.MethodGet).
-		Path("/{object:.+}").
-		HandlerFunc(g.getObjectHandler)
-	hostBucketRouter.NewRoute().
-		Name(getBucketReadQuotaRouterName).
-		Methods(http.MethodGet).
-		Queries(model.GetBucketReadQuotaQuery, "",
-			model.GetBucketReadQuotaMonthQuery, "{year_month}").
-		HandlerFunc(g.getBucketReadQuotaHandler)
-	hostBucketRouter.NewRoute().
-		Name(listBucketReadRecordRouterName).
-		Methods(http.MethodGet).
-		Queries(model.ListBucketReadRecordQuery, "",
+
+	var routers []*mux.Router
+
+	routers = append(routers, router.Host("{bucket:.+}."+g.domain).Subrouter())
+	routers = append(routers, router.PathPrefix("/{bucket}").Subrouter())
+
+	for _, router := range routers {
+		// Put Object
+		router.NewRoute().Name(putObjectRouterName).Methods(http.MethodPut).Path("/{object:.+}").HandlerFunc(g.putObjectHandler)
+
+		// Put Object By Offset
+		router.NewRoute().Name(putObjectByOffsetRouterName).Methods(http.MethodPost).Path("/{object:.+}").HandlerFunc(g.putObjectByOffsetHandler).Queries(
+			"offset", "{offset}",
+			"complete", "{complete}",
+			"context", "{context}")
+
+		// Get Object
+		router.NewRoute().Name(getObjectRouterName).Methods(http.MethodPut).Path("/{object:.+}").HandlerFunc(g.getObjectHandler)
+
+		// Get Bucket Read Quota
+		router.NewRoute().Name(getBucketReadQuotaRouterName).Methods(http.MethodGet).HandlerFunc(g.getBucketReadQuotaHandler).Queries(
+			model.GetBucketReadQuotaQuery, "",
+			model.GetBucketReadQuotaMonthQuery, "{year_month}")
+
+		// List Bucket Read Record
+		router.NewRoute().Name(listBucketReadRecordRouterName).Methods(http.MethodGet).HandlerFunc(g.listBucketReadRecordHandler).Queries(
+			model.ListBucketReadRecordQuery, "",
 			model.ListBucketReadRecordMaxRecordsQuery, "{max_records}",
 			model.StartTimestampUs, "{start_ts}",
-			model.EndTimestampUs, "{end_ts}").
-		HandlerFunc(g.listBucketReadRecordHandler)
-	hostBucketRouter.NewRoute().
-		Name(listObjectsByBucketRouterName).
-		Methods(http.MethodGet).
-		Path("/").
-		HandlerFunc(g.listObjectsByBucketNameHandler)
-	hostBucketRouter.NotFoundHandler = http.HandlerFunc(g.notFoundHandler)
+			model.EndTimestampUs, "{end_ts}")
+
+		// List Objects by bucket
+		router.NewRoute().Name(listObjectsByBucketRouterName).Methods(http.MethodGet).Path("/").HandlerFunc(g.listObjectsByBucketNameHandler)
+
+		// Get Bucket Meta
+		router.NewRoute().Name(getBucketMetaRouterName).Methods(http.MethodGet).Queries(model.GetBucketMetaQuery, "").HandlerFunc(g.getBucketMetaHandler)
+
+		// Get Object Meta
+		router.NewRoute().Name(getObjectMetaRouterName).Methods(http.MethodGet).Path("/{object:.+}").HandlerFunc(g.getObjectMetaHandler).Queries(
+			model.GetObjectMetaQuery, "")
+
+		// Query upload progress
+		router.NewRoute().Name(queryUploadProgressRouterName).Methods(http.MethodGet).Path("/{object:.+}.").HandlerFunc(g.queryUploadProgressHandler).Queries(
+			model.UploadProgressQuery, "")
+
+		// Not found
+		router.NotFoundHandler = http.HandlerFunc(g.notFoundHandler)
+	}
 
 	// bucket list router, path style
-	router.Path("/").
-		Name(getUserBucketsRouterName).
-		Methods(http.MethodGet).
-		HandlerFunc(g.getUserBucketsHandler)
+	router.Path("/").Name(getUserBucketsRouterName).Methods(http.MethodGet).HandlerFunc(g.getUserBucketsHandler)
 
 	// admin router, path style
-	router.Path(model.GetApprovalPath).
-		Name(approvalRouterName).
-		Methods(http.MethodGet).
-		Queries(model.ActionQuery, "{action}").
-		HandlerFunc(g.getApprovalHandler)
-	router.Path(model.ChallengePath).
-		Name(challengeRouterName).
-		Methods(http.MethodGet).
-		HandlerFunc(g.challengeHandler)
+	// Get Approval
+	router.Path(model.GetApprovalPath).Name(approvalRouterName).Methods(http.MethodGet).HandlerFunc(g.getApprovalHandler).
+		Queries(model.ActionQuery, "{action}")
+
+	// Challenge
+	router.Path(model.ChallengePath).Name(challengeRouterName).Methods(http.MethodGet).HandlerFunc(g.challengeHandler)
+
 	// replicate piece to receiver
-	router.Path(model.ReplicateObjectPiecePath).
-		Name(replicateObjectPieceRouterName).
-		Methods(http.MethodPut).
-		HandlerFunc(g.replicateHandler)
+	router.Path(model.ReplicateObjectPiecePath).Name(replicateObjectPieceRouterName).Methods(http.MethodPut).HandlerFunc(g.replicateHandler)
+
 	// universal endpoint download
-	router.Path("/download/{bucket:[^/]*}/{object:.+}").
-		Name(downloadObjectByUniversalEndpointName).
-		Methods(http.MethodGet).
+	router.Path("/download/{bucket:[^/]*}/{object:.+}").Name(downloadObjectByUniversalEndpointName).Methods(http.MethodGet).
 		HandlerFunc(g.downloadObjectByUniversalEndpointHandler)
 	// universal endpoint view
-	router.Path("/view/{bucket:[^/]*}/{object:.+}").
-		Name(viewObjectByUniversalEndpointName).
-		Methods(http.MethodGet).
+	router.Path("/view/{bucket:[^/]*}/{object:.+}").Name(viewObjectByUniversalEndpointName).Methods(http.MethodGet).
 		HandlerFunc(g.viewObjectByUniversalEndpointHandler)
-	//redirect for universal endpoint
+
+	// redirect for universal endpoint
 	http.Handle("/", router)
 
 	// off-chain-auth router
@@ -138,56 +128,6 @@ func (g *GateModular) RegisterHandler(router *mux.Router) {
 	//	Name(updateUserPublicKey).
 	//	Methods(http.MethodPost).
 	//	HandlerFunc(g.updateUserPublicKeyHandler)
-
-	// path style
-	pathBucketRouter := router.PathPrefix("/{bucket}").Subrouter()
-	pathBucketRouter.NewRoute().
-		Name(putObjectRouterName).
-		Methods(http.MethodPut).
-		Path("/{object:.+}").
-		HandlerFunc(g.putObjectHandler)
-	pathBucketRouter.NewRoute().
-		Name(queryUploadProgressRouterName).
-		Methods(http.MethodGet).
-		Path("/{object:.+}").
-		Queries(model.UploadProgressQuery, "").
-		HandlerFunc(g.queryUploadProgressHandler)
-	pathBucketRouter.NewRoute().
-		Name(getBucketMetaRouterName).
-		Methods(http.MethodGet).
-		Queries(model.GetBucketMetaQuery, "").
-		HandlerFunc(g.getBucketMetaHandler)
-	pathBucketRouter.NewRoute().
-		Name(getObjectMetaRouterName).
-		Methods(http.MethodGet).
-		Path("/{object:.+}").
-		Queries(model.GetObjectMetaQuery, "").
-		HandlerFunc(g.getObjectMetaHandler)
-	pathBucketRouter.NewRoute().
-		Name(getObjectRouterName).
-		Methods(http.MethodGet).
-		Path("/{object:.+}").
-		HandlerFunc(g.getObjectHandler)
-	pathBucketRouter.NewRoute().
-		Name(getBucketReadQuotaRouterName).
-		Methods(http.MethodGet).
-		Queries(model.GetBucketReadQuotaQuery, "",
-			model.GetBucketReadQuotaMonthQuery, "{year_month}").
-		HandlerFunc(g.getBucketReadQuotaHandler)
-	pathBucketRouter.NewRoute().
-		Name(listBucketReadRecordRouterName).
-		Methods(http.MethodGet).
-		Queries(model.ListBucketReadRecordQuery, "",
-			model.ListBucketReadRecordMaxRecordsQuery, "{max_records}",
-			model.StartTimestampUs, "{start_ts}",
-			model.EndTimestampUs, "{end_ts}").
-		HandlerFunc(g.listBucketReadRecordHandler)
-	pathBucketRouter.NewRoute().
-		Name(listObjectsByBucketRouterName).
-		Methods(http.MethodGet).
-		Path("/").
-		HandlerFunc(g.listObjectsByBucketNameHandler)
-	pathBucketRouter.NotFoundHandler = http.HandlerFunc(g.notFoundHandler)
 
 	router.NotFoundHandler = http.HandlerFunc(g.notFoundHandler)
 	router.Use(localhttp.Limit)

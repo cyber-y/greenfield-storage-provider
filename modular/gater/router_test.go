@@ -6,9 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bnb-chain/greenfield-storage-provider/model"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/bnb-chain/greenfield-storage-provider/model"
 )
 
 var (

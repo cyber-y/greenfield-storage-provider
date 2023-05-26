@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/bnb-chain/greenfield/types/s3util"
 	"github.com/cosmos/gogoproto/jsonpb"
 	"github.com/ethereum/go-ethereum/common"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/bnb-chain/greenfield-storage-provider/modular/metadata/types"
 	"github.com/bnb-chain/greenfield-storage-provider/pkg/log"
 	"github.com/bnb-chain/greenfield-storage-provider/util"
+	"github.com/bnb-chain/greenfield/types/s3util"
 )
 
 // getUserBucketsHandler handle get object request
